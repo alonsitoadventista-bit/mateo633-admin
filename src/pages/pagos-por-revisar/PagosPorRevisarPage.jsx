@@ -1,17 +1,21 @@
-import { PlaceholderModulo } from '../../components/PlaceholderModulo';
+/**
+ * pages/pagos-por-revisar/PagosPorRevisarPage.jsx  (Fase 5)
+ * -----------------------------------------
+ * Punto de entrada del módulo, montado en App.jsx bajo "pagos-por-revisar/*".
+ * Rutas anidadas: lista (índice) y detalle por pedidoId. Mismo patrón
+ * que ClientesPage.jsx (Fase 3) y PedidosPage.jsx (Fase 4).
+ */
+import { Route, Routes } from 'react-router-dom';
+import { ListaPagosPorRevisar } from './ListaPagosPorRevisar.jsx';
+import { DetallePagoPorRevisar } from './DetallePagoPorRevisar.jsx';
+import { NotFoundPage } from '../NotFoundPage.jsx';
 
 export function PagosPorRevisarPage() {
   return (
-    <PlaceholderModulo
-      titulo="Pagos por revisar"
-      fase={5}
-      permiso="Panel (administrador o vendedor)"
-      descripcion="Bandeja de pagos reportados por el cliente o por ManyChat, aún sin confirmar. Ver comprobante (imagen desde /uploads), aprobar (marca pagado + activa en un paso) o rechazar con motivo (el pedido queda pendiente)."
-      endpoints={[
-        'GET    /admin/dashboard/pagos-por-revisar   (la lista vive en el controller de dashboard)',
-        'PUT    /admin/pagos-por-revisar/:pedidoId/aprobar',
-        'PUT    /admin/pagos-por-revisar/:pedidoId/rechazar',
-      ]}
-    />
+    <Routes>
+      <Route index element={<ListaPagosPorRevisar />} />
+      <Route path=":pedidoId" element={<DetallePagoPorRevisar />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
