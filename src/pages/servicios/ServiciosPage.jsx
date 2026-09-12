@@ -1,26 +1,23 @@
-import { PlaceholderModulo } from '../../components/PlaceholderModulo';
+/**
+ * pages/servicios/ServiciosPage.jsx  (Fase 6)
+ * -----------------------------------------
+ * Punto de entrada del módulo, montado en App.jsx bajo "servicios/*"
+ * (ya protegido con ProtectedRoute roles={SOLO_ADMIN}). Rutas
+ * anidadas: lista (índice) y detalle por id. Mismo patrón que
+ * ClientesPage.jsx (Fase 3), PedidosPage.jsx (Fase 4) y
+ * PagosPorRevisarPage.jsx (Fase 5).
+ */
+import { Route, Routes } from 'react-router-dom';
+import { ListaServicios } from './ListaServicios.jsx';
+import { DetalleServicio } from './DetalleServicio.jsx';
+import { NotFoundPage } from '../NotFoundPage.jsx';
 
 export function ServiciosPage() {
   return (
-    <PlaceholderModulo
-      titulo="Servicios y Planes"
-      fase={6}
-      permiso="SoloAdmin (rol 'administrador')"
-      descripcion="Catálogo completo (incluye inactivos). CRUD de servicios y de sus planes (duración/precio), activar/desactivar (soft-delete), y subida/eliminación de imagen del servicio (multipart, campo 'imagen', máx 3 MB)."
-      endpoints={[
-        'GET    /admin/servicios',
-        'GET    /admin/servicios/:id',
-        'POST   /admin/servicios',
-        'PUT    /admin/servicios/:id',
-        'DELETE /admin/servicios/:id            (desactiva)',
-        'PUT    /admin/servicios/:id/activar',
-        'POST   /admin/servicios/:id/imagen     (multipart: imagen)',
-        'DELETE /admin/servicios/:id/imagen',
-        'POST   /admin/servicios/:id/planes',
-        'PUT    /admin/planes/:id',
-        'DELETE /admin/planes/:id               (desactiva)',
-        'PUT    /admin/planes/:id/activar',
-      ]}
-    />
+    <Routes>
+      <Route index element={<ListaServicios />} />
+      <Route path=":id" element={<DetalleServicio />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
