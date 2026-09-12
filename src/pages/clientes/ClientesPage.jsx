@@ -1,22 +1,20 @@
-import { PlaceholderModulo } from '../../components/PlaceholderModulo';
+/**
+ * pages/clientes/ClientesPage.jsx  (Fase 3)
+ * -----------------------------------------
+ * Punto de entrada del módulo, montado en App.jsx bajo "clientes/*".
+ * Rutas anidadas: lista (índice) y detalle por id.
+ */
+import { Route, Routes } from 'react-router-dom';
+import { ListaClientes } from './ListaClientes.jsx';
+import { DetalleCliente } from './DetalleCliente.jsx';
+import { NotFoundPage } from '../NotFoundPage.jsx';
 
 export function ClientesPage() {
   return (
-    <PlaceholderModulo
-      titulo="Clientes"
-      fase={3}
-      permiso="Panel (administrador o vendedor)"
-      descripcion="Lista con filtro por estado, alta desde el panel, detalle con pestañas (pedidos, pagos confirmados, recordatorios), edición de datos y cambio de estado (activo/inactivo/bloqueado)."
-      endpoints={[
-        'GET    /admin/clientes?estado=',
-        'POST   /admin/clientes',
-        'GET    /admin/clientes/:id',
-        'PUT    /admin/clientes/:id',
-        'PUT    /admin/clientes/:id/estado',
-        'GET    /admin/clientes/:id/pedidos',
-        'GET    /admin/clientes/:id/pagos',
-        'GET    /admin/clientes/:id/recordatorios',
-      ]}
-    />
+    <Routes>
+      <Route index element={<ListaClientes />} />
+      <Route path=":id" element={<DetalleCliente />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }
