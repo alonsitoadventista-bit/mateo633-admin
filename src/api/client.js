@@ -10,7 +10,9 @@
  *       400 validación · 401 token · 403 rol · 404 no encontrado
  *       409 duplicado · 500 { error: "Error interno del servidor" }
  *   - 401 en cualquier endpoint => sesión inválida: se cierra y se
- *     redirige al login (ver notificar401).
+ *     redirige al login (ver notificar401), EXCEPTO en el propio
+ *     POST /admin/login, donde 401 es "credenciales incorrectas"
+ *     (error de negocio) y no hay sesión que cerrar.
  */
 
 import { API_BASE_URL } from '../config';
@@ -65,7 +67,9 @@ export async function solicitar(ruta, opciones = {}) {
     throw new ErrorApi('No se pudo contactar al servidor. ¿El backend está corriendo?', 0);
   }
 
-  if (respuesta.status === 401) {
+  // El 401 de /admin/login es un error de negocio (credenciales incorrectas),
+  // no una sesión expirada: no hay sesión que cerrar ni token que invalidar.
+  if (respuesta.status === 401 && ruta !== '/admin/login') {
     notificar401();
     throw new ErrorApi('Tu sesión expiró. Inicia sesión de nuevo.', 401);
   }
