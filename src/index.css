@@ -2,20 +2,33 @@
 
 /**
  * Tailwind CSS v4 — configuración CSS-first (sin tailwind.config.js).
- * Tokens del panel expuestos como variables de tema: se pueden usar
- * como utilidades (bg-marca, text-marca-600, etc.).
+ * Identidad visual Mateo 6:33 Premium: negro elegante + dorado premium.
+ * Tokens expuestos como variables de tema -> generan utilidades
+ * automáticamente (bg-fondo, text-texto, border-borde, bg-marca-500, etc.).
+ * Todos los componentes de components/ui/ consumen estos tokens, así que
+ * cambiarlos aquí se propaga a todo el panel sin tocar cada módulo.
  */
 @theme {
-  --color-marca-50: #f0fdfa;
-  --color-marca-100: #ccfbf1;
-  --color-marca-500: #14b8a6;
-  --color-marca-600: #0d9488;
-  --color-marca-700: #0f766e;
-  --color-marca-800: #115e59;
+  /* Dorado premium — color de marca */
+  --color-marca-50: #fbf3dc;
+  --color-marca-100: #f5e6b8;
+  --color-marca-400: #e3c567;
+  --color-marca-500: #d4af37;
+  --color-marca-600: #b8952b;
+  --color-marca-700: #96771f;
+  --color-marca-800: #6e5716;
+
+  /* Superficies y texto — negro elegante con profundidad en capas */
+  --color-fondo: #050505;
+  --color-superficie: #121214;
+  --color-superficie-alta: #1b1c20;
+  --color-borde: #2a2a2e;
+  --color-texto: #f5f5f4;
+  --color-texto-suave: #9ca3af;
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html,
@@ -26,7 +39,7 @@ body,
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

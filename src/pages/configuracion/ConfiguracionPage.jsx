@@ -28,17 +28,17 @@ const CATEGORIAS = [
 
 /** Vista previa corta del valor guardado, según su tipo. */
 function VistaPreviaValor({ definicion, valor }) {
-  if (valor === null || valor === undefined || valor === '') return <span className="text-slate-400">—</span>;
+  if (valor === null || valor === undefined || valor === '') return <span className="text-texto-suave">—</span>;
   if (definicion.tipo === 'texto' || definicion.tipo === 'url') {
-    return <span className="text-slate-700">{String(valor)}</span>;
+    return <span className="text-texto">{String(valor)}</span>;
   }
   if (definicion.tipo === 'textarea') {
     const texto = String(valor);
-    return <span className="text-slate-700">{texto.length > 60 ? `${texto.slice(0, 60)}…` : texto}</span>;
+    return <span className="text-texto">{texto.length > 60 ? `${texto.slice(0, 60)}…` : texto}</span>;
   }
   // objeto / arreglo: sin forma fija garantizada -- se muestra como JSON compacto,
   // mismo criterio ya usado para `detalles` en Auditoría/Pedidos.
-  return <code className="text-xs text-slate-500">{JSON.stringify(valor)}</code>;
+  return <code className="text-xs text-texto-suave">{JSON.stringify(valor)}</code>;
 }
 
 export function ConfiguracionPage() {
@@ -50,8 +50,8 @@ export function ConfiguracionPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">Configuración</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-lg font-semibold text-texto">Configuración</h1>
+        <p className="text-sm text-texto-suave">
           Datos del negocio, métodos de pago y ajustes del sistema. No se pueden crear claves nuevas.
         </p>
       </div>
@@ -118,9 +118,9 @@ export function ConfiguracionPage() {
 function CampoTextarea({ etiqueta, className = '', ...props }) {
   return (
     <label className={`block ${className}`}>
-      {etiqueta && <span className="mb-1 block text-sm font-medium text-slate-700">{etiqueta}</span>}
+      {etiqueta && <span className="mb-1 block text-sm font-medium text-texto">{etiqueta}</span>}
       <textarea
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition
+        className="w-full rounded-lg border border-borde px-3 py-2 text-sm outline-none transition
           focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
         rows={5}
         {...props}
@@ -213,7 +213,7 @@ function ModalEditarClave({ abierto, definicion, fila, onCerrar, onGuardado }) {
       }
     >
       <form id="form-editar-clave" onSubmit={enviar} className="space-y-4">
-        {definicion.nota && <p className="text-xs text-slate-500">{definicion.nota}</p>}
+        {definicion.nota && <p className="text-xs text-texto-suave">{definicion.nota}</p>}
 
         {(definicion.tipo === 'texto' || definicion.tipo === 'url') && (
           <Campo
@@ -263,7 +263,7 @@ function ModalEditarClave({ abierto, definicion, fila, onCerrar, onGuardado }) {
           />
         )}
 
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );

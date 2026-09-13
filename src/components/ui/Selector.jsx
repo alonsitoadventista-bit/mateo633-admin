@@ -4,10 +4,10 @@ export function Selector({ etiqueta, opciones = [], placeholder, className = '',
   const normalizadas = opciones.map((o) => (typeof o === 'string' ? { valor: o, texto: o } : o));
   return (
     <label className={`block ${className}`} htmlFor={idInput}>
-      {etiqueta && <span className="mb-1 block text-sm font-medium text-slate-700">{etiqueta}</span>}
+      {etiqueta && <span className="mb-1 block text-sm font-medium text-texto-suave">{etiqueta}</span>}
       <select
         id={idInput}
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none
+        className="w-full rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-sm text-texto outline-none
           transition focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
         {...props}
       >

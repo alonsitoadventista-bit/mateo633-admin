@@ -50,8 +50,8 @@ export function ListaUsuarios() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Vendedores</h1>
-          <p className="text-sm text-slate-500">Cuentas del panel: administradores y vendedores</p>
+          <h1 className="text-lg font-semibold text-texto">Vendedores</h1>
+          <p className="text-sm text-texto-suave">Cuentas del panel: administradores y vendedores</p>
         </div>
         <Boton onClick={() => setModalAbierto(true)}>+ Nuevo usuario</Boton>
       </div>
@@ -205,7 +205,7 @@ function ModalNuevoUsuario({ abierto, onCerrar, onCreado }) {
           onChange={actualizar('rol')}
           required
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );

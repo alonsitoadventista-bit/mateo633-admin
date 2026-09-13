@@ -85,7 +85,7 @@ export function DetalleServicio() {
           </dl>
         </div>
 
-        <div className="mt-4 border-t border-slate-100 pt-4">
+        <div className="mt-4 border-t border-borde pt-4">
           <Boton
             variante={servicio.activo ? 'peligro' : 'primario'}
             tamano="md"
@@ -202,7 +202,7 @@ export function DetalleServicio() {
 
   function BotonVolver() {
     return (
-      <Link to="/servicios" className="text-sm font-medium text-marca-700 hover:underline">
+      <Link to="/servicios" className="text-sm font-medium text-marca-500 hover:underline">
         ← Volver a servicios
       </Link>
     );
@@ -212,8 +212,8 @@ export function DetalleServicio() {
 function Dato({ etiqueta, valor }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{etiqueta}</dt>
-      <dd className="mt-0.5 text-sm text-slate-800">{valor}</dd>
+      <dt className="text-xs font-medium uppercase tracking-wide text-texto-suave">{etiqueta}</dt>
+      <dd className="mt-0.5 text-sm text-texto">{valor}</dd>
     </div>
   );
 }
@@ -246,11 +246,11 @@ function ImagenServicio({ servicio, onCambiada }) {
 
   return (
     <div className="flex w-full flex-col items-center gap-2 sm:w-40">
-      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-lg border border-borde bg-superficie-alta">
         {servicio.imagen_url ? (
           <img src={urlArchivo(servicio.imagen_url)} alt={servicio.nombre} className="h-full w-full object-cover" />
         ) : (
-          <span className="text-xs text-slate-400">Sin imagen</span>
+          <span className="text-xs text-texto-suave">Sin imagen</span>
         )}
       </div>
 
@@ -263,7 +263,7 @@ function ImagenServicio({ servicio, onCambiada }) {
           Quitar imagen
         </Boton>
       )}
-      {error && <p className="text-center text-xs text-red-600">{error}</p>}
+      {error && <p className="text-center text-xs text-red-400">{error}</p>}
 
       <DialogoConfirmacion
         abierto={confirmandoQuitar}
@@ -338,7 +338,7 @@ function ModalEditarServicio({ abierto, servicio, onCerrar, onGuardado }) {
         <Campo etiqueta="Nombre" name="nombre" value={campos.nombre} onChange={actualizar('nombre')} required autoFocus />
         <Campo etiqueta="Categoría" name="categoria" value={campos.categoria} onChange={actualizar('categoria')} />
         <Campo etiqueta="Descripción" name="descripcion" value={campos.descripcion} onChange={actualizar('descripcion')} />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );
@@ -425,7 +425,7 @@ function ModalPlan({ abierto, servicioId, plan, onCerrar, onGuardado }) {
           onChange={(e) => setPrecio(e.target.value)}
           required
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );

@@ -41,8 +41,8 @@ export function ListaPagosPorRevisar() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">Pagos por revisar</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-lg font-semibold text-texto">Pagos por revisar</h1>
+        <p className="text-sm text-texto-suave">
           Pagos reportados por el cliente o por ManyChat, pendientes de confirmar o rechazar.
         </p>
       </div>
@@ -81,8 +81,8 @@ export function ListaPagosPorRevisar() {
                 titulo: 'Cliente',
                 render: (f) => (
                   <div>
-                    <p className="font-medium text-slate-800">{f.cliente_nombre}</p>
-                    <p className="text-xs text-slate-400">{f.cliente_whatsapp}</p>
+                    <p className="font-medium text-texto">{f.cliente_nombre}</p>
+                    <p className="text-xs text-texto-suave">{f.cliente_whatsapp}</p>
                   </div>
                 ),
               },

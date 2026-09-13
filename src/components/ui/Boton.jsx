@@ -1,8 +1,8 @@
 const VARIANTES = {
-  primario: 'bg-marca-600 text-white hover:bg-marca-700 disabled:bg-marca-600/50',
-  secundario: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50',
-  peligro: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-600/50',
-  fantasma: 'bg-transparent text-slate-600 hover:bg-slate-100',
+  primario: 'bg-marca-500 text-fondo hover:bg-marca-400 disabled:bg-marca-500/40 shadow shadow-marca-500/20',
+  secundario: 'bg-superficie-alta text-texto border border-borde hover:border-marca-500/40 hover:bg-superficie-alta/70',
+  peligro: 'bg-red-600 text-white hover:bg-red-500 disabled:bg-red-600/50',
+  fantasma: 'bg-transparent text-texto-suave hover:bg-superficie-alta hover:text-texto',
 };
 
 const TAMANOS = {

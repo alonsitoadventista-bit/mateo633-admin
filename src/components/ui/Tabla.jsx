@@ -16,7 +16,7 @@ export function Tabla({ columnas, filas = [], claveFila, onFila, vacio = 'Sin re
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+          <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-texto-suave">
             {columnas.map((c) => (
               <th key={c.clave} className="px-3 py-2 font-medium">
                 {c.titulo}
@@ -27,7 +27,7 @@ export function Tabla({ columnas, filas = [], claveFila, onFila, vacio = 'Sin re
         <tbody>
           {filas.length === 0 ? (
             <tr>
-              <td colSpan={columnas.length} className="px-3 py-8 text-center text-slate-400">
+              <td colSpan={columnas.length} className="px-3 py-8 text-center text-texto-suave">
                 {vacio}
               </td>
             </tr>
@@ -36,10 +36,10 @@ export function Tabla({ columnas, filas = [], claveFila, onFila, vacio = 'Sin re
               <tr
                 key={claveFila ? claveFila(fila) : i}
                 onClick={onFila ? () => onFila(fila) : undefined}
-                className={`border-b border-slate-100 ${onFila ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+                className={`border-b border-borde ${onFila ? 'cursor-pointer hover:bg-superficie-alta' : ''}`}
               >
                 {columnas.map((c) => (
-                  <td key={c.clave} className="px-3 py-2 text-slate-700">
+                  <td key={c.clave} className="px-3 py-2 text-texto">
                     {c.render ? c.render(fila, i) : fila[c.clave] ?? '—'}
                   </td>
                 ))}

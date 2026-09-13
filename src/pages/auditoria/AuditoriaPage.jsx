@@ -71,8 +71,8 @@ export function AuditoriaPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Auditoría</h1>
-          <p className="text-sm text-slate-500">Bitácora de todo el sistema: quién hizo qué y cuándo</p>
+          <h1 className="text-lg font-semibold text-texto">Auditoría</h1>
+          <p className="text-sm text-texto-suave">Bitácora de todo el sistema: quién hizo qué y cuándo</p>
         </div>
         <div className="flex items-center gap-2">
           <Boton variante="secundario" cargando={exportando} onClick={exportar}>
@@ -126,7 +126,7 @@ export function AuditoriaPage() {
           </div>
         )}
 
-        {errorExportar && <p className="mb-3 text-xs text-red-600">{errorExportar}</p>}
+        {errorExportar && <p className="mb-3 text-xs text-red-400">{errorExportar}</p>}
 
         {error ? (
           <EstadoError error={error} onReintentar={refetch} />
@@ -157,7 +157,7 @@ export function AuditoriaPage() {
                   titulo: 'Detalles',
                   render: (f) =>
                     f.detalles && Object.keys(f.detalles).length > 0 ? (
-                      <code className="text-xs text-slate-500">{JSON.stringify(f.detalles)}</code>
+                      <code className="text-xs text-texto-suave">{JSON.stringify(f.detalles)}</code>
                     ) : (
                       '—'
                     ),
@@ -165,7 +165,7 @@ export function AuditoriaPage() {
               ]}
             />
 
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-texto-suave">
               <span>
                 {desde1}–{hasta} de {total}
               </span>

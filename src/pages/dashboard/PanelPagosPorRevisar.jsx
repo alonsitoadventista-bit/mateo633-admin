@@ -28,7 +28,7 @@ export function PanelPagosPorRevisar({ recargar }) {
     <Tarjeta
       titulo={`Pagos por revisar${filas.length ? ` · ${filas.length}` : ''}`}
       acciones={
-        <Link to="/pagos-por-revisar" className="text-xs font-medium text-marca-700 hover:underline">
+        <Link to="/pagos-por-revisar" className="text-xs font-medium text-marca-500 hover:underline">
           Ver bandeja
         </Link>
       }
@@ -63,7 +63,7 @@ export function PanelPagosPorRevisar({ recargar }) {
             ]}
           />
           {filas.length > TOPE_VISIBLE && (
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-texto-suave">
               +{filas.length - TOPE_VISIBLE} más en la bandeja
             </p>
           )}

@@ -51,8 +51,8 @@ export function ListaServicios() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Servicios y planes</h1>
-          <p className="text-sm text-slate-500">Catálogo de servicios de streaming, con sus planes de duración/precio</p>
+          <h1 className="text-lg font-semibold text-texto">Servicios y planes</h1>
+          <p className="text-sm text-texto-suave">Catálogo de servicios de streaming, con sus planes de duración/precio</p>
         </div>
         <Boton onClick={() => setModalAbierto(true)}>+ Nuevo servicio</Boton>
       </div>
@@ -107,11 +107,11 @@ export function ListaServicios() {
                         className="h-8 w-8 rounded object-cover"
                       />
                     ) : (
-                      <span className="flex h-8 w-8 items-center justify-center rounded bg-slate-100 text-xs text-slate-400">
+                      <span className="flex h-8 w-8 items-center justify-center rounded bg-superficie-alta text-xs text-texto-suave">
                         —
                       </span>
                     )}
-                    <span className="font-medium text-slate-800">{f.nombre}</span>
+                    <span className="font-medium text-texto">{f.nombre}</span>
                   </div>
                 ),
               },
@@ -205,7 +205,7 @@ function ModalNuevoServicio({ abierto, onCerrar, onCreado }) {
           value={campos.descripcion}
           onChange={actualizar('descripcion')}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );

@@ -92,7 +92,7 @@ export function DetalleUsuario() {
           <Dato etiqueta="Creado" valor={fecha(usuario.fecha_creacion)} />
         </dl>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-borde pt-4">
           <Boton variante="secundario" tamano="md" onClick={() => setModalPassword(true)}>
             Restablecer contraseña
           </Boton>
@@ -105,7 +105,7 @@ export function DetalleUsuario() {
             {usuario.activo ? 'Desactivar usuario' : 'Activar usuario'}
           </Boton>
           {usuario.activo && esPropiaCuenta && (
-            <p className="text-xs text-slate-500">No puedes desactivar tu propia cuenta.</p>
+            <p className="text-xs text-texto-suave">No puedes desactivar tu propia cuenta.</p>
           )}
         </div>
 
@@ -129,15 +129,15 @@ export function DetalleUsuario() {
       </Tarjeta>
 
       <Tarjeta>
-        <div className="mb-3 flex gap-1 border-b border-slate-100">
+        <div className="mb-3 flex gap-1 border-b border-borde">
           {PESTANAS.map((p) => (
             <button
               key={p.clave}
               onClick={() => setPestana(p.clave)}
               className={`rounded-t-lg px-3 py-2 text-sm font-medium transition ${
                 pestana === p.clave
-                  ? 'border-b-2 border-marca-600 text-marca-700'
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'border-b-2 border-marca-500 text-marca-500'
+                  : 'text-texto-suave hover:text-texto'
               }`}
             >
               {p.titulo}
@@ -164,7 +164,7 @@ export function DetalleUsuario() {
 
   function BotonVolver() {
     return (
-      <Link to="/usuarios" className="text-sm font-medium text-marca-700 hover:underline">
+      <Link to="/usuarios" className="text-sm font-medium text-marca-500 hover:underline">
         ← Volver a usuarios
       </Link>
     );
@@ -174,8 +174,8 @@ export function DetalleUsuario() {
 function Dato({ etiqueta, valor }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{etiqueta}</dt>
-      <dd className="mt-0.5 text-sm text-slate-800">{valor ?? '—'}</dd>
+      <dt className="text-xs font-medium uppercase tracking-wide text-texto-suave">{etiqueta}</dt>
+      <dd className="mt-0.5 text-sm text-texto">{valor ?? '—'}</dd>
     </div>
   );
 }
@@ -231,8 +231,8 @@ function ModalEditarUsuario({ abierto, usuario, onCerrar, onGuardado }) {
       <form id="form-editar-usuario" onSubmit={enviar} className="space-y-4">
         <Campo etiqueta="Nombre" name="nombre" value={campos.nombre} onChange={actualizar('nombre')} required autoFocus />
         <Campo etiqueta="Usuario" name="usuario" value={campos.usuario} onChange={actualizar('usuario')} required />
-        <p className="text-xs text-slate-500">El rol y la contraseña no se cambian aquí.</p>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        <p className="text-xs text-texto-suave">El rol y la contraseña no se cambian aquí.</p>
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );
@@ -293,7 +293,7 @@ function ModalRestablecerPassword({ abierto, usuarioId, onCerrar }) {
       }
     >
       {exito ? (
-        <p className="text-sm text-slate-600">Contraseña restablecida correctamente.</p>
+        <p className="text-sm text-texto-suave">Contraseña restablecida correctamente.</p>
       ) : (
         <form id="form-restablecer-password" onSubmit={enviar} className="space-y-4">
           <Campo
@@ -315,7 +315,7 @@ function ModalRestablecerPassword({ abierto, usuarioId, onCerrar }) {
             onChange={(e) => setConfirmacion(e.target.value)}
             required
           />
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="text-xs text-red-400">{error}</p>}
         </form>
       )}
     </Modal>

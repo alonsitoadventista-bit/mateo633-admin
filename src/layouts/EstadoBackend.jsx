@@ -29,14 +29,14 @@ export function EstadoBackend() {
   }, []);
 
   const config = {
-    comprobando: { color: 'bg-slate-300', texto: 'Comprobando API…' },
+    comprobando: { color: 'bg-texto-suave/40', texto: 'Comprobando API…' },
     ok: { color: 'bg-green-500', texto: 'API conectada' },
     db: { color: 'bg-amber-500', texto: 'API sin base de datos' },
     caido: { color: 'bg-red-500', texto: 'API no responde' },
   }[estado];
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" title={config.texto}>
+    <span className="inline-flex items-center gap-1.5 text-xs text-texto-suave" title={config.texto}>
       <span className={`h-2 w-2 rounded-full ${config.color}`} />
       <span className="hidden sm:inline">{config.texto}</span>
     </span>

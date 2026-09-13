@@ -58,8 +58,8 @@ export function DialogoConfirmacion({
         </>
       }
     >
-      <p className="text-sm text-slate-600">{mensaje}</p>
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      <p className="text-sm text-texto-suave">{mensaje}</p>
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
     </Modal>
   );
 }

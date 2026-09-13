@@ -16,36 +16,55 @@ import { useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
 import { Boton } from '../../components/ui';
 import { FilaMetricas } from './FilaMetricas.jsx';
+import { PanelMasVendidos } from './PanelMasVendidos.jsx';
+import { PanelPedidosRecientes } from './PanelPedidosRecientes.jsx';
+import { PanelModulos } from './PanelModulos.jsx';
 import { PanelPagosPorRevisar } from './PanelPagosPorRevisar.jsx';
 import { PanelServiciosVencidos } from './PanelServiciosVencidos.jsx';
-import { PanelMasVendidos } from './PanelMasVendidos.jsx';
 import { PanelVentasPorVendedor } from './PanelVentasPorVendedor.jsx';
 
+const FECHA_HOY = new Intl.DateTimeFormat('es-PE', {
+  weekday: 'long',
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
+}).format(new Date());
+
 export function DashboardPage() {
-  const { tienePermiso } = useAuth();
+  const { admin, tienePermiso } = useAuth();
   const [recargar, setRecargar] = useState(0);
   const esAdmin = tienePermiso(['administrador']);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">Resumen operativo del negocio</p>
+          <h1 className="text-xl font-semibold text-texto">
+            Hola, <span className="text-marca-500">{admin?.nombre}</span>
+          </h1>
+          <p className="text-sm text-texto-suave">Bienvenido al panel de Mateo 6:33 Premium</p>
         </div>
-        <Boton variante="secundario" tamano="sm" onClick={() => setRecargar((n) => n + 1)}>
-          Actualizar
-        </Boton>
+        <div className="flex items-center gap-3">
+          <p className="hidden text-xs capitalize text-texto-suave sm:block">{FECHA_HOY}</p>
+          <Boton variante="secundario" tamano="sm" onClick={() => setRecargar((n) => n + 1)}>
+            Actualizar
+          </Boton>
+        </div>
       </div>
 
       <FilaMetricas recargar={recargar} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <PanelMasVendidos recargar={recargar} />
+        <PanelPedidosRecientes recargar={recargar} />
+      </div>
+
+      <PanelModulos />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PanelPagosPorRevisar recargar={recargar} />
         <PanelServiciosVencidos recargar={recargar} />
       </div>
-
-      <PanelMasVendidos recargar={recargar} />
 
       {esAdmin && <PanelVentasPorVendedor recargar={recargar} />}
     </div>

@@ -78,21 +78,21 @@ export function DetalleCliente() {
           <Dato etiqueta="Registrado" valor={fecha(cliente.fecha_registro)} />
         </dl>
 
-        <div className="mt-4 border-t border-slate-100 pt-4">
+        <div className="mt-4 border-t border-borde pt-4">
           <ControlEstado cliente={cliente} onCambiado={refetch} />
         </div>
       </Tarjeta>
 
       <Tarjeta>
-        <div className="mb-3 flex gap-1 border-b border-slate-100">
+        <div className="mb-3 flex gap-1 border-b border-borde">
           {PESTANAS.map((p) => (
             <button
               key={p.clave}
               onClick={() => setPestana(p.clave)}
               className={`rounded-t-lg px-3 py-2 text-sm font-medium transition ${
                 pestana === p.clave
-                  ? 'border-b-2 border-marca-600 text-marca-700'
-                  : 'text-slate-500 hover:text-slate-700'
+                  ? 'border-b-2 border-marca-500 text-marca-500'
+                  : 'text-texto-suave hover:text-texto'
               }`}
             >
               {p.titulo}
@@ -119,7 +119,7 @@ export function DetalleCliente() {
 
   function BotonVolver() {
     return (
-      <Link to="/clientes" className="text-sm font-medium text-marca-700 hover:underline">
+      <Link to="/clientes" className="text-sm font-medium text-marca-500 hover:underline">
         ← Volver a clientes
       </Link>
     );
@@ -129,8 +129,8 @@ export function DetalleCliente() {
 function Dato({ etiqueta, valor }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{etiqueta}</dt>
-      <dd className="mt-0.5 text-sm text-slate-800">{valor}</dd>
+      <dt className="text-xs font-medium uppercase tracking-wide text-texto-suave">{etiqueta}</dt>
+      <dd className="mt-0.5 text-sm text-texto">{valor}</dd>
     </div>
   );
 }
@@ -145,7 +145,7 @@ function ControlEstado({ cliente, onCambiado }) {
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Estado actual</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-texto-suave">Estado actual</p>
         <Etiqueta color={COLOR_ESTADO_CLIENTE[cliente.estado]} className="mt-1">
           {humanizar(cliente.estado)}
         </Etiqueta>
@@ -248,7 +248,7 @@ function ModalEditarCliente({ abierto, cliente, onCerrar, onGuardado }) {
           required
         />
         <Campo etiqueta="Email (opcional)" name="email" type="email" value={campos.email} onChange={actualizar('email')} />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );

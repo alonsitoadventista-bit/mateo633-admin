@@ -52,8 +52,8 @@ export function ListaClientes() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Clientes</h1>
-          <p className="text-sm text-slate-500">Alta, búsqueda y estado de los clientes registrados</p>
+          <h1 className="text-lg font-semibold text-texto">Clientes</h1>
+          <p className="text-sm text-texto-suave">Alta, búsqueda y estado de los clientes registrados</p>
         </div>
         <Boton onClick={() => setModalAbierto(true)}>+ Nuevo cliente</Boton>
       </div>
@@ -199,7 +199,7 @@ function ModalNuevoCliente({ abierto, onCerrar, onCreado }) {
           value={campos.email}
           onChange={actualizar('email')}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );

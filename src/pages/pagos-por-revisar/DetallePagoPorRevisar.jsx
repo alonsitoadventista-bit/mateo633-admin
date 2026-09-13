@@ -94,7 +94,7 @@ export function DetallePagoPorRevisar() {
           <Dato
             etiqueta="Cliente"
             valor={
-              <Link to={`/clientes/${pedido.cliente_id}`} className="text-marca-700 hover:underline">
+              <Link to={`/clientes/${pedido.cliente_id}`} className="text-marca-500 hover:underline">
                 {pedido.cliente_nombre}
               </Link>
             }
@@ -135,7 +135,7 @@ export function DetallePagoPorRevisar() {
                       href={urlArchivo(detalles.comprobante_url)}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-marca-700 hover:underline"
+                      className="text-marca-500 hover:underline"
                     >
                       Ver imagen
                     </a>
@@ -144,7 +144,7 @@ export function DetallePagoPorRevisar() {
               )}
             </dl>
 
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-borde pt-4">
               <Boton variante="primario" tamano="md" onClick={() => setModalAprobar(true)}>
                 Aprobar pago
               </Boton>
@@ -179,7 +179,7 @@ export function DetallePagoPorRevisar() {
 
   function BotonVolver() {
     return (
-      <Link to="/pagos-por-revisar" className="text-sm font-medium text-marca-700 hover:underline">
+      <Link to="/pagos-por-revisar" className="text-sm font-medium text-marca-500 hover:underline">
         ← Volver a la bandeja
       </Link>
     );
@@ -189,8 +189,8 @@ export function DetallePagoPorRevisar() {
 function Dato({ etiqueta, valor }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{etiqueta}</dt>
-      <dd className="mt-0.5 text-sm text-slate-800">{valor ?? '—'}</dd>
+      <dt className="text-xs font-medium uppercase tracking-wide text-texto-suave">{etiqueta}</dt>
+      <dd className="mt-0.5 text-sm text-texto">{valor ?? '—'}</dd>
     </div>
   );
 }
@@ -247,7 +247,7 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
       }
     >
       <form id="form-aprobar-pago" onSubmit={enviar} className="space-y-4">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-texto-suave">
           Esto marca el pedido como pagado y lo activa de inmediato (fecha de vencimiento + recordatorios se calculan igual que en el módulo Pedidos).
         </p>
         <Campo
@@ -268,7 +268,7 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
           value={metodo}
           onChange={(e) => setMetodo(e.target.value)}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );
@@ -318,7 +318,7 @@ function ModalRechazar({ abierto, pedidoId, onCerrar, onRechazado }) {
       }
     >
       <form id="form-rechazar-pago" onSubmit={enviar} className="space-y-4">
-        <p className="text-sm text-slate-600">El pedido permanece pendiente; el cliente o el staff puede reportar el pago de nuevo.</p>
+        <p className="text-sm text-texto-suave">El pedido permanece pendiente; el cliente o el staff puede reportar el pago de nuevo.</p>
         <Campo
           etiqueta="Motivo del rechazo"
           name="motivo"
@@ -327,7 +327,7 @@ function ModalRechazar({ abierto, pedidoId, onCerrar, onRechazado }) {
           required
           autoFocus
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );
@@ -355,7 +355,7 @@ function PestanaAuditoria({ pedidoId }) {
           titulo: 'Detalles',
           render: (f) =>
             f.detalles && Object.keys(f.detalles).length > 0 ? (
-              <code className="text-xs text-slate-500">{JSON.stringify(f.detalles)}</code>
+              <code className="text-xs text-texto-suave">{JSON.stringify(f.detalles)}</code>
             ) : (
               '—'
             ),

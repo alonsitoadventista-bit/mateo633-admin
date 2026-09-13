@@ -23,7 +23,7 @@ export function PanelServiciosVencidos({ recargar }) {
     <Tarjeta
       titulo={`Servicios vencidos${filas.length ? ` · ${filas.length}` : ''}`}
       acciones={
-        <Link to="/pedidos" className="text-xs font-medium text-marca-700 hover:underline">
+        <Link to="/pedidos" className="text-xs font-medium text-marca-500 hover:underline">
           Ver pedidos
         </Link>
       }
@@ -51,9 +51,9 @@ export function PanelServiciosVencidos({ recargar }) {
             ]}
           />
           {filas.length > TOPE_VISIBLE && (
-            <p className="mt-2 text-xs text-slate-500">+{filas.length - TOPE_VISIBLE} más</p>
+            <p className="mt-2 text-xs text-texto-suave">+{filas.length - TOPE_VISIBLE} más</p>
           )}
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-texto-suave">
             Cálculo en vivo: el estado guardado sigue siendo “activo” hasta cancelar o renovar.
           </p>
         </>

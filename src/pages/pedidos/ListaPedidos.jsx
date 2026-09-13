@@ -56,8 +56,8 @@ export function ListaPedidos() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Pedidos</h1>
-          <p className="text-sm text-slate-500">Compras y renovaciones de servicios por cliente</p>
+          <h1 className="text-lg font-semibold text-texto">Pedidos</h1>
+          <p className="text-sm text-texto-suave">Compras y renovaciones de servicios por cliente</p>
         </div>
         <Boton onClick={() => setModalAbierto(true)}>+ Nuevo pedido</Boton>
       </div>
@@ -107,8 +107,8 @@ export function ListaPedidos() {
                 titulo: 'Cliente',
                 render: (f) => (
                   <div>
-                    <p className="font-medium text-slate-800">{f.cliente_nombre}</p>
-                    <p className="text-xs text-slate-400">{formatoWhatsapp(f.cliente_whatsapp)}</p>
+                    <p className="font-medium text-texto">{f.cliente_nombre}</p>
+                    <p className="text-xs text-texto-suave">{formatoWhatsapp(f.cliente_whatsapp)}</p>
                   </div>
                 ),
               },
@@ -266,9 +266,9 @@ function ModalNuevoPedido({ abierto, onCerrar, onCreado }) {
           required
         />
         {servicioId && !cargandoPlanes && opcionesPlan.length === 0 && (
-          <p className="text-xs text-amber-600">Este servicio no tiene planes activos.</p>
+          <p className="text-xs text-amber-400">Este servicio no tiene planes activos.</p>
         )}
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
   );
