@@ -187,6 +187,7 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
   const navigate = useNavigate();
   const [modalPago, setModalPago] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
+  const [modalEntregaManual, setModalEntregaManual] = useState(false);
   const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar' | 'liberar'
 
   const mostrarPagar = pedido.estado === 'pendiente';
@@ -222,6 +223,11 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
           Asignar manualmente
         </Boton>
       )}
+      {mostrarAsignarManual && (
+        <Boton variante="peligro" tamano="md" onClick={() => setModalEntregaManual(true)}>
+          ⚠ Entrega manual (emergencia)
+        </Boton>
+      )}
       {mostrarLiberar && (
         <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('liberar')}>
           Liberar cuenta
@@ -254,6 +260,16 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
         onCerrar={() => setModalAsignar(false)}
         onAsignado={() => {
           setModalAsignar(false);
+          onCambiado();
+        }}
+      />
+
+      <ModalEntregaManual
+        abierto={modalEntregaManual}
+        pedido={pedido}
+        onCerrar={() => setModalEntregaManual(false)}
+        onEntregado={() => {
+          setModalEntregaManual(false);
           onCambiado();
         }}
       />
@@ -472,6 +488,129 @@ function ModalAsignarManual({ abierto, pedido, onCerrar, onAsignado }) {
             required
           />
         )}
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * PUT /admin/pedidos/:id/inventario/entrega-manual — botón de EMERGENCIA.
+ * A diferencia de "Asignar manualmente" (elige un perfil YA existente
+ * en el inventario), este crea uno nuevo ad-hoc y lo asigna en el
+ * mismo paso -- para cuando no hay absolutamente nada precargado para
+ * este servicio. Queda igual de registrado en el historial que
+ * cualquier otra asignación.
+ */
+function ModalEntregaManual({ abierto, pedido, onCerrar, onEntregado }) {
+  const [identificadorCuenta, setIdentificadorCuenta] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [numeroPerfil, setNumeroPerfil] = useState('');
+  const [pinPerfil, setPinPerfil] = useState('');
+  const [notasInternas, setNotasInternas] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+
+  function limpiar() {
+    setIdentificadorCuenta('');
+    setContrasena('');
+    setNumeroPerfil('');
+    setPinPerfil('');
+    setNotasInternas('');
+    setError(null);
+  }
+
+  function cerrar() {
+    limpiar();
+    onCerrar();
+  }
+
+  async function enviar(e) {
+    e.preventDefault();
+    setCargando(true);
+    setError(null);
+    try {
+      await inventarioApi.entregaManual(pedido.id, {
+        identificador_cuenta: identificadorCuenta.trim(),
+        contrasena,
+        numero_perfil: numeroPerfil.trim() || undefined,
+        pin_perfil: pinPerfil.trim() || undefined,
+        notas_internas: notasInternas.trim() || undefined,
+      });
+      cerrar();
+      onEntregado();
+    } catch (err) {
+      setError(err?.message || 'No se pudo completar la entrega manual.');
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <Modal
+      abierto={abierto}
+      titulo="⚠ Entrega manual de emergencia"
+      onCerrar={cargando ? undefined : cerrar}
+      pie={
+        <>
+          <Boton variante="secundario" onClick={cerrar} disabled={cargando}>
+            Cancelar
+          </Boton>
+          <Boton
+            variante="peligro"
+            type="submit"
+            form="form-entrega-manual"
+            cargando={cargando}
+            disabled={!identificadorCuenta.trim() || !contrasena}
+          >
+            Entregar ahora
+          </Boton>
+        </>
+      }
+    >
+      <form id="form-entrega-manual" onSubmit={enviar} className="space-y-4">
+        <p className="text-sm text-texto-suave">
+          Úsalo SOLO cuando no haya ningún perfil precargado en el inventario para "{pedido.servicio_nombre}". Esto
+          crea una cuenta nueva en el inventario con estos datos y la asigna a este pedido de inmediato — queda
+          registrada en el historial igual que cualquier otra asignación.
+        </p>
+        <Campo
+          etiqueta="Usuario o correo de la cuenta"
+          name="identificador_cuenta"
+          value={identificadorCuenta}
+          onChange={(e) => setIdentificadorCuenta(e.target.value)}
+          required
+          autoFocus
+        />
+        <Campo
+          etiqueta="Contraseña"
+          name="contrasena"
+          type="text"
+          value={contrasena}
+          onChange={(e) => setContrasena(e.target.value)}
+          required
+        />
+        <Campo
+          etiqueta="Número de perfil (opcional)"
+          name="numero_perfil"
+          value={numeroPerfil}
+          onChange={(e) => setNumeroPerfil(e.target.value)}
+        />
+        <Campo
+          etiqueta="PIN del perfil (opcional)"
+          name="pin_perfil"
+          value={pinPerfil}
+          onChange={(e) => setPinPerfil(e.target.value)}
+        />
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-texto-suave">Notas internas (opcional)</span>
+          <textarea
+            className="w-full rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-sm text-texto outline-none transition placeholder:text-texto-suave/60 focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
+            rows={3}
+            value={notasInternas}
+            onChange={(e) => setNotasInternas(e.target.value)}
+          />
+        </label>
         {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>

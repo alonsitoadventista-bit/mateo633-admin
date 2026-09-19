@@ -31,3 +31,11 @@ export const historialPorPedido = (pedidoId) => api.get(`/admin/pedidos/${pedido
 /** PUT /admin/pedidos/:id/inventario/asignar -- body: { inventario_id }. Fallback manual si no hubo asignación automática. */
 export const asignarManual = (pedidoId, inventario_id) =>
   api.put(`/admin/pedidos/${pedidoId}/inventario/asignar`, { inventario_id });
+
+/**
+ * PUT /admin/pedidos/:id/inventario/entrega-manual -- botón de EMERGENCIA:
+ * crea un perfil de inventario nuevo (ad-hoc) y lo asigna de inmediato.
+ * body: { identificador_cuenta, contrasena, numero_perfil?, pin_perfil?, notas_internas? }
+ */
+export const entregaManual = (pedidoId, datos) =>
+  api.put(`/admin/pedidos/${pedidoId}/inventario/entrega-manual`, datos);
