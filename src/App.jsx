@@ -14,6 +14,7 @@ import { DashboardPage } from './pages/dashboard/DashboardPage.jsx';
 import { ClientesPage } from './pages/clientes/ClientesPage.jsx';
 import { PedidosPage } from './pages/pedidos/PedidosPage.jsx';
 import { PagosPorRevisarPage } from './pages/pagos-por-revisar/PagosPorRevisarPage.jsx';
+import { InventarioPage } from './pages/inventario/InventarioPage.jsx';
 import { ServiciosPage } from './pages/servicios/ServiciosPage.jsx';
 import { UsuariosPage } from './pages/usuarios/UsuariosPage.jsx';
 import { AuditoriaPage } from './pages/auditoria/AuditoriaPage.jsx';
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="clientes/*" element={<ClientesPage />} />
         <Route path="pedidos/*" element={<PedidosPage />} />
         <Route path="pagos-por-revisar/*" element={<PagosPorRevisarPage />} />
+        <Route path="inventario/*" element={<InventarioPage />} />
 
         <Route
           path="servicios/*"

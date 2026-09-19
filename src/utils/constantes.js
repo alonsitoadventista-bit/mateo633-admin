@@ -39,6 +39,7 @@ export const ACCIONES_AUDITORIA = [
   'pago_reportado_manychat',
   'pago_reportado_cliente',
   'servicio_activado',
+  'credenciales_enviadas',
   'pedido_cancelado',
   'servicio_creado',
   'servicio_editado',
@@ -73,6 +74,14 @@ export const COLOR_ESTADO_PEDIDO = {
   activo: 'green',
   vencido: 'red',
   cancelado: 'gray',
+};
+
+/** Clases Tailwind por estado del inventario (Fase 1). */
+export const COLOR_ESTADO_INVENTARIO = {
+  disponible: 'green',
+  asignado: 'blue',
+  vencido: 'red',
+  bloqueado: 'gray',
 };
 
 export const COLOR_ESTADO_CLIENTE = {

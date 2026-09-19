@@ -131,13 +131,12 @@ export function DetallePagoPorRevisar() {
                 <Dato
                   etiqueta="Comprobante"
                   valor={
-                    <a
-                      href={urlArchivo(detalles.comprobante_url)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-marca-500 hover:underline"
-                    >
-                      Ver imagen
+                    <a href={urlArchivo(detalles.comprobante_url)} target="_blank" rel="noreferrer">
+                      <img
+                        src={urlArchivo(detalles.comprobante_url)}
+                        alt="Comprobante de pago"
+                        className="h-24 w-auto rounded border border-borde object-contain transition hover:opacity-80"
+                      />
                     </a>
                   }
                 />

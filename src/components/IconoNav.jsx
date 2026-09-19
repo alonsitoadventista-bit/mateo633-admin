@@ -44,6 +44,13 @@ const PATHS = {
       <path d="M12 11.5V20" />
     </>
   ),
+  inventario: (
+    <>
+      <rect x="3.5" y="7.5" width="17" height="13" rx="1.5" />
+      <path d="M3.5 7.5 7 3.5h10l3.5 4" />
+      <path d="M9.5 11.5h5" />
+    </>
+  ),
   vendedores: (
     <>
       <circle cx="12" cy="8" r="3.2" />

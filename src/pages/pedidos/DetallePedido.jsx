@@ -15,16 +15,25 @@
  * desde ese estado.
  * Pestañas de historial (pagos, auditoría, cadena de renovaciones),
  * cada una sobre su propio endpoint ya existente en api/pedidos.js.
+ *
+ * Inventario (Fase 1, solo tipo_gestion='perfil'): "Activar servicio"
+ * ya intenta asignar un perfil disponible automáticamente (ver
+ * services/inventarioService.js del backend) -- esta pantalla solo
+ * MUESTRA el resultado y ofrece el respaldo manual si no había
+ * inventario disponible, más la acción "Liberar cuenta" cuando quedó
+ * "vencido" (requiere que el admin haya rotado la contraseña real).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import * as pedidosApi from '../../api/pedidos';
+import * as inventarioApi from '../../api/inventario';
 import {
   Tarjeta,
   Tabla,
   Boton,
   Campo,
+  Selector,
   Etiqueta,
   Modal,
   DialogoConfirmacion,
@@ -32,7 +41,7 @@ import {
   EstadoError,
   EstadoVacio,
 } from '../../components/ui';
-import { COLOR_ESTADO_PEDIDO } from '../../utils/constantes';
+import { COLOR_ESTADO_PEDIDO, COLOR_ESTADO_INVENTARIO } from '../../utils/constantes';
 import { fecha, fechaHora, humanizar, moneda, whatsapp as formatoWhatsapp } from '../../utils/formato';
 
 const PESTANAS = [
@@ -44,6 +53,7 @@ const PESTANAS = [
 export function DetallePedido() {
   const { id } = useParams();
   const { data: pedido, cargando, error, refetch } = useApi(() => pedidosApi.detalle(id), [id]);
+  const { data: inventario, refetch: refetchInventario } = useApi(() => inventarioApi.porPedido(id), [id]);
 
   const [pestana, setPestana] = useState('pagos');
 
@@ -98,9 +108,37 @@ export function DetallePedido() {
         </dl>
 
         <div className="mt-4 border-t border-borde pt-4">
-          <ControlAcciones pedido={pedido} onCambiado={refetch} />
+          <ControlAcciones
+            pedido={pedido}
+            inventario={inventario}
+            onCambiado={() => {
+              refetch();
+              refetchInventario();
+            }}
+          />
         </div>
       </Tarjeta>
+
+      {(pedido.estado === 'pagado' || pedido.estado === 'activo' || (pedido.estado === 'cancelado' && inventario)) && (
+        <Tarjeta titulo="Perfil del inventario">
+          {inventario ? (
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Dato etiqueta="Identificador de la cuenta" valor={inventario.identificador_cuenta || '—'} />
+              <Dato etiqueta="Perfil" valor={inventario.numero_perfil || '—'} />
+              <Dato
+                etiqueta="Estado del inventario"
+                valor={<Etiqueta color={COLOR_ESTADO_INVENTARIO[inventario.estado]}>{humanizar(inventario.estado)}</Etiqueta>}
+              />
+              <Dato etiqueta="Notas internas" valor={inventario.notas_internas || '—'} />
+            </dl>
+          ) : (
+            <EstadoVacio
+              titulo="Sin perfil asignado"
+              descripcion="No había ningún perfil disponible del inventario para este servicio al momento de activar. Usa 'Asignar manualmente' arriba en cuanto haya inventario cargado."
+            />
+          )}
+        </Tarjeta>
+      )}
 
       <Tarjeta>
         <div className="mb-3 flex gap-1 border-b border-borde">
@@ -145,17 +183,21 @@ function Dato({ etiqueta, valor }) {
 }
 
 /** Botones de acción según el estado actual, cada uno mapeado 1:1 a un endpoint ya existente. */
-function ControlAcciones({ pedido, onCambiado }) {
+function ControlAcciones({ pedido, inventario, onCambiado }) {
   const navigate = useNavigate();
   const [modalPago, setModalPago] = useState(false);
-  const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar'
+  const [modalAsignar, setModalAsignar] = useState(false);
+  const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar' | 'liberar'
 
   const mostrarPagar = pedido.estado === 'pendiente';
   const mostrarActivar = pedido.estado === 'pagado';
+  // Solo se ofrece "Asignar manualmente" cuando el pedido ya está pagado/activo Y no tiene ningún perfil asignado todavía.
+  const mostrarAsignarManual = (pedido.estado === 'pagado' || pedido.estado === 'activo') && !inventario;
+  const mostrarLiberar = inventario?.estado === 'vencido';
   const mostrarCancelar = pedido.estado === 'pendiente' || pedido.estado === 'pagado' || pedido.estado === 'activo';
   const mostrarRenovar = pedido.estado === 'activo' || pedido.estado === 'vencido';
 
-  if (!mostrarPagar && !mostrarActivar && !mostrarCancelar && !mostrarRenovar) {
+  if (!mostrarPagar && !mostrarActivar && !mostrarAsignarManual && !mostrarLiberar && !mostrarCancelar && !mostrarRenovar) {
     return (
       <p className="text-sm text-texto-suave">
         Este pedido está {humanizar(pedido.estado).toLowerCase()} y no admite más acciones.
@@ -173,6 +215,16 @@ function ControlAcciones({ pedido, onCambiado }) {
       {mostrarActivar && (
         <Boton variante="primario" tamano="md" onClick={() => setConfirmando('activar')}>
           Activar servicio
+        </Boton>
+      )}
+      {mostrarAsignarManual && (
+        <Boton variante="secundario" tamano="md" onClick={() => setModalAsignar(true)}>
+          Asignar manualmente
+        </Boton>
+      )}
+      {mostrarLiberar && (
+        <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('liberar')}>
+          Liberar cuenta
         </Boton>
       )}
       {mostrarRenovar && (
@@ -196,13 +248,35 @@ function ControlAcciones({ pedido, onCambiado }) {
         }}
       />
 
+      <ModalAsignarManual
+        abierto={modalAsignar}
+        pedido={pedido}
+        onCerrar={() => setModalAsignar(false)}
+        onAsignado={() => {
+          setModalAsignar(false);
+          onCambiado();
+        }}
+      />
+
       <DialogoConfirmacion
         abierto={confirmando === 'activar'}
         titulo="Activar servicio"
-        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará la fecha de vencimiento (${pedido.duracion_dias} días) y se programarán los 3 recordatorios de renovación.`}
+        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará la fecha de vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios de renovación, y si hay un perfil disponible del inventario para "${pedido.servicio_nombre}" se le asignará automáticamente.`}
         textoConfirmar="Sí, activar"
         onConfirmar={async () => {
           await pedidosApi.activar(pedido.id);
+          onCambiado();
+        }}
+        onCerrar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmacion
+        abierto={confirmando === 'liberar'}
+        titulo="Liberar cuenta"
+        mensaje="Confirma esto SOLO si ya cambiaste la contraseña real de esta cuenta en la plataforma del servicio (Netflix, Disney+, etc.). El sistema no puede rotarla por ti -- si liberas sin cambiarla, el cliente anterior seguiría teniendo acceso."
+        textoConfirmar="Ya la cambié, liberar"
+        onConfirmar={async () => {
+          await inventarioApi.liberar(inventario.id);
           onCambiado();
         }}
         onCerrar={() => setConfirmando(null)}
@@ -312,6 +386,92 @@ function ModalMarcarPagado({ abierto, pedidoId, onCerrar, onPagado }) {
           value={notas}
           onChange={(e) => setNotas(e.target.value)}
         />
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * PUT /admin/pedidos/:id/inventario/asignar — body: { inventario_id }.
+ * Fallback manual, solo aparece cuando no hubo ningún perfil disponible
+ * al momento de activar (o marcar pagado). Lista el inventario
+ * "disponible" del MISMO servicio del pedido para elegir uno.
+ */
+function ModalAsignarManual({ abierto, pedido, onCerrar, onAsignado }) {
+  const { data: disponibles, cargando: cargandoLista, error: errorLista } = useApi(
+    () => (abierto ? inventarioApi.listar({ servicio_id: pedido.servicio_id, estado: 'disponible' }) : Promise.resolve([])),
+    [abierto, pedido.servicio_id]
+  );
+  const [inventarioId, setInventarioId] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!abierto) return;
+    setInventarioId('');
+    setError(null);
+  }, [abierto]);
+
+  function cerrar() {
+    setError(null);
+    onCerrar();
+  }
+
+  async function enviar(e) {
+    e.preventDefault();
+    if (!inventarioId) return;
+    setCargando(true);
+    setError(null);
+    try {
+      await inventarioApi.asignarManual(pedido.id, Number(inventarioId));
+      onAsignado();
+    } catch (err) {
+      setError(err?.message || 'No se pudo asignar el perfil.');
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  const filas = Array.isArray(disponibles) ? disponibles : [];
+
+  return (
+    <Modal
+      abierto={abierto}
+      titulo="Asignar perfil manualmente"
+      onCerrar={cargando ? undefined : cerrar}
+      pie={
+        <>
+          <Boton variante="secundario" onClick={cerrar} disabled={cargando}>
+            Cancelar
+          </Boton>
+          <Boton type="submit" form="form-asignar-manual" cargando={cargando} disabled={!inventarioId}>
+            Asignar
+          </Boton>
+        </>
+      }
+    >
+      <form id="form-asignar-manual" onSubmit={enviar} className="space-y-4">
+        {errorLista && <p className="text-xs text-red-400">No se pudo cargar el inventario disponible.</p>}
+        {!cargandoLista && filas.length === 0 && !errorLista && (
+          <EstadoVacio
+            titulo="No hay inventario disponible"
+            descripcion={`No hay ningún perfil "disponible" para "${pedido.servicio_nombre}" ahora mismo. Carga inventario nuevo desde el módulo Inventario.`}
+          />
+        )}
+        {filas.length > 0 && (
+          <Selector
+            etiqueta="Perfil disponible"
+            name="inventario_id"
+            value={inventarioId}
+            onChange={(e) => setInventarioId(e.target.value)}
+            opciones={filas.map((f) => ({
+              valor: String(f.id),
+              texto: `${f.identificador_cuenta || 'sin correo'} — perfil ${f.numero_perfil || '—'}`,
+            }))}
+            required
+          />
+        )}
         {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>

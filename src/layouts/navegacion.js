@@ -17,6 +17,7 @@ export const NAVEGACION = [
   { ruta: '/clientes', etiqueta: 'Clientes', icono: 'clientes', roles: null, fase: 3 },
   { ruta: '/pedidos', etiqueta: 'Pedidos', icono: 'pedidos', roles: null, fase: 4 },
   { ruta: '/pagos-por-revisar', etiqueta: 'Pagos por revisar', icono: 'pagos', roles: null, fase: 5 },
+  { ruta: '/inventario', etiqueta: 'Inventario', icono: 'inventario', roles: null, fase: 10 },
   { ruta: '/servicios', etiqueta: 'Servicios y Planes', icono: 'servicios', roles: ['administrador'], fase: 6 },
   { ruta: '/usuarios', etiqueta: 'Vendedores', icono: 'vendedores', roles: ['administrador'], fase: 7 },
   { ruta: '/auditoria', etiqueta: 'Auditoría', icono: 'auditoria', roles: ['administrador'], fase: 8 },
