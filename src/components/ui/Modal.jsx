@@ -16,7 +16,7 @@ export function Modal({ abierto, titulo, onCerrar, children, pie }) {
       onClick={onCerrar}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-borde bg-superficie shadow-2xl shadow-black/50"
+        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-borde bg-superficie shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -31,7 +31,7 @@ export function Modal({ abierto, titulo, onCerrar, children, pie }) {
             ✕
           </button>
         </header>
-        <div className="px-4 py-4 text-texto">{children}</div>
+        <div className="overflow-y-auto px-4 py-4 text-texto">{children}</div>
         {pie && <footer className="flex justify-end gap-2 border-t border-borde px-4 py-3">{pie}</footer>}
       </div>
     </div>

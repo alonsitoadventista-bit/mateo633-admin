@@ -17,6 +17,7 @@ export function LoginPage() {
 
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
+  const [mostrarPassword, setMostrarPassword] = useState(false);
   const [error, setError] = useState(null);
   const [cargando, setCargando] = useState(false);
 
@@ -72,15 +73,32 @@ export function LoginPage() {
             required
             autoFocus
           />
-          <Campo
-            etiqueta="Contraseña"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <label className="block" htmlFor="password">
+            <span className="mb-1 block text-sm font-medium text-texto-suave">Contraseña</span>
+            <span className="relative block">
+              <input
+                id="password"
+                name="password"
+                type={mostrarPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-lg border border-borde bg-superficie-alta px-3 py-2 pr-10 text-sm text-texto outline-none transition
+                  placeholder:text-texto-suave/60
+                  focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-texto-suave transition hover:text-texto"
+                aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                tabIndex={-1}
+              >
+                <IconoOjo abierto={mostrarPassword} className="h-5 w-5" />
+              </button>
+            </span>
+          </label>
 
           {error && (
             <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
@@ -94,5 +112,33 @@ export function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+/** Ojo abierto/tachado para el toggle de mostrar/ocultar contraseña. Mismo estilo (línea, currentColor) que IconoNav.jsx, sin dependencia nueva. */
+function IconoOjo({ abierto, className = 'h-5 w-5' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {abierto ? (
+        <>
+          <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      ) : (
+        <>
+          <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M4 4l16 16" />
+        </>
+      )}
+    </svg>
   );
 }
