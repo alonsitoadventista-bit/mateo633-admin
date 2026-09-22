@@ -1,14 +1,14 @@
 /**
  * utils/formato.js
  * -----------------------------------------
- * Formateo para mostrar. La moneda y la zona horaria por defecto
- * coinciden con la configuración precargada del backend (migración 012:
- * moneda='MXN', zona_horaria='America/Mexico_City'). Más adelante el
- * módulo Configuración podrá sobrescribir estos valores.
+ * Formateo para mostrar. El negocio opera en Perú, moneda soles (PEN).
+ * Más adelante el módulo Configuración podrá sobrescribir estos valores
+ * (la tabla `configuracion` en el backend todavía tiene una clave
+ * `moneda` sin conectar a este archivo).
  */
 
-const MONEDA_POR_DEFECTO = 'MXN';
-const LOCALE = 'es-MX';
+const MONEDA_POR_DEFECTO = 'PEN';
+const LOCALE = 'es-PE';
 
 export function moneda(valor, codigo = MONEDA_POR_DEFECTO) {
   const n = Number(valor);
