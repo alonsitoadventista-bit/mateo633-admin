@@ -14,9 +14,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../auth/useAuth';
 import * as inventarioApi from '../../api/inventario';
 import * as serviciosApi from '../../api/servicios';
 import { filtrarInventario } from './busquedaInventario';
+import { ModalEliminarCuenta } from './DetalleCuenta';
 import {
   Tarjeta,
   Tabla,
@@ -41,6 +43,9 @@ export function ListaInventario() {
   const [mostrarEliminadas, setMostrarEliminadas] = useState(false);
   const navigate = useNavigate();
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [cuentaAEliminar, setCuentaAEliminar] = useState(null);
+  const { tienePermiso } = useAuth();
+  const esAdministrador = tienePermiso(['administrador']);
 
   const { data: servicios } = useApi(() => serviciosApi.listar(), []);
   const { data, cargando, error, refetch } = useApi(
@@ -171,6 +176,23 @@ export function ListaInventario() {
               },
               { clave: 'pedido_id_actual', titulo: 'Pedido', render: (f) => (f.pedido_id_actual ? `#${f.pedido_id_actual}` : '—') },
               { clave: 'fecha_vence', titulo: 'Vence (proveedor)', render: (f) => fecha(f.fecha_vence) },
+              ...(esAdministrador
+                ? [
+                    {
+                      clave: 'acciones',
+                      titulo: '',
+                      render: (f) =>
+                        f.cuenta_eliminada_en ? null : (
+                          // stopPropagation: el clic en la fila abre el detalle de la cuenta.
+                          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                            <Boton variante="peligro" tamano="sm" onClick={() => setCuentaAEliminar(f.cuenta_servicio_id)}>
+                              Eliminar cuenta
+                            </Boton>
+                          </div>
+                        ),
+                    },
+                  ]
+                : []),
             ]}
           />
         )}
@@ -186,7 +208,51 @@ export function ListaInventario() {
           refetch();
         }}
       />
+      <EliminarCuentaDesdeLista
+        cuentaId={cuentaAEliminar}
+        onCerrar={() => setCuentaAEliminar(null)}
+        onEliminada={() => {
+          setCuentaAEliminar(null);
+          refetch();
+        }}
+      />
     </div>
+  );
+}
+
+/**
+ * Mismo modal y mismo endpoint que el detalle de la cuenta (eliminación
+ * LÓGICA, migración 022). Carga la cuenta completa para contar los perfiles
+ * asignados, porque el listado puede estar filtrado por estado o búsqueda.
+ */
+function EliminarCuentaDesdeLista({ cuentaId, onCerrar, onEliminada }) {
+  const { data, error } = useApi(
+    () => (cuentaId ? inventarioApi.cuenta(cuentaId, false) : Promise.resolve(null)),
+    [cuentaId]
+  );
+
+  if (!cuentaId) return null;
+  if (error) {
+    return (
+      <Modal
+        abierto
+        titulo="Eliminar cuenta"
+        onCerrar={onCerrar}
+        pie={
+          <Boton variante="secundario" onClick={onCerrar}>
+            Cerrar
+          </Boton>
+        }
+      >
+        <p className="text-xs text-red-400">No se pudo cargar la cuenta.</p>
+      </Modal>
+    );
+  }
+  if (!data || String(data.cuenta.id) !== String(cuentaId)) return null;
+
+  const asignados = data.perfiles.filter((p) => p.estado === 'asignado').length;
+  return (
+    <ModalEliminarCuenta abierto cuenta={data.cuenta} asignados={asignados} onCerrar={onCerrar} onEliminada={onEliminada} />
   );
 }
 

@@ -12,7 +12,7 @@
  *
  * El cliente y el WhatsApp NO se editan aquí: vienen en vivo del pedido
  * asignado (perfil -> pedido -> cliente). Los PIN y la contraseña solo
- * se traen del backend al pulsar "Ver secretos".
+ * se traen del backend al pulsar "Ver contraseña".
  */
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -137,7 +137,7 @@ export function DetalleCuenta() {
         acciones={
           <div className="flex flex-wrap gap-2">
             <Boton variante="secundario" tamano="sm" onClick={() => setVerSecretos((v) => !v)}>
-              {verSecretos ? '🙈 Ocultar secretos' : '👁 Ver secretos'}
+              {verSecretos ? '🙈 Ocultar contraseña' : '👁 Ver contraseña'}
             </Boton>
             {esAdministrador && !eliminada && (
               <Boton variante="peligro" tamano="sm" onClick={() => setModalEliminar(true)}>
@@ -476,7 +476,7 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
  * (perfiles, asignaciones, entregas, pedidos) se conserva. Se puede restaurar.
  * Bloqueada mientras haya perfiles asignados a clientes activos.
  */
-function ModalEliminarCuenta({ abierto, cuenta, asignados, onCerrar, onEliminada }) {
+export function ModalEliminarCuenta({ abierto, cuenta, asignados, onCerrar, onEliminada }) {
   const [motivo, setMotivo] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
