@@ -48,6 +48,7 @@ const PESTANAS = [
   { clave: 'pagos', titulo: 'Pagos' },
   { clave: 'auditoria', titulo: 'Auditoría' },
   { clave: 'renovaciones', titulo: 'Renovaciones' },
+  { clave: 'entregas', titulo: 'Entregas' },
 ];
 
 export function DetallePedido() {
@@ -160,6 +161,7 @@ export function DetallePedido() {
         {pestana === 'pagos' && <PestanaPagos pedidoId={id} />}
         {pestana === 'auditoria' && <PestanaAuditoria pedidoId={id} />}
         {pestana === 'renovaciones' && <PestanaRenovaciones pedidoId={id} pedidoActualId={pedido.id} />}
+        {pestana === 'entregas' && <PestanaEntregas pedidoId={id} />}
       </Tarjeta>
     </div>
   );
@@ -188,6 +190,7 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
   const [modalPago, setModalPago] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
   const [modalEntregaManual, setModalEntregaManual] = useState(false);
+  const [modalEntregar, setModalEntregar] = useState(false);
   const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar' | 'liberar'
 
   const mostrarPagar = pedido.estado === 'pendiente';
@@ -195,10 +198,12 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
   // Solo se ofrece "Asignar manualmente" cuando el pedido ya está pagado/activo Y no tiene ningún perfil asignado todavía.
   const mostrarAsignarManual = (pedido.estado === 'pagado' || pedido.estado === 'activo') && !inventario;
   const mostrarLiberar = inventario?.estado === 'vencido';
+  // Paso FINAL de entrega (migración 021): pedido activo con su perfil asignado.
+  const mostrarEntregar = pedido.estado === 'activo' && inventario?.estado === 'asignado';
   const mostrarCancelar = pedido.estado === 'pendiente' || pedido.estado === 'pagado' || pedido.estado === 'activo';
   const mostrarRenovar = pedido.estado === 'activo' || pedido.estado === 'vencido';
 
-  if (!mostrarPagar && !mostrarActivar && !mostrarAsignarManual && !mostrarLiberar && !mostrarCancelar && !mostrarRenovar) {
+  if (!mostrarPagar && !mostrarActivar && !mostrarAsignarManual && !mostrarLiberar && !mostrarCancelar && !mostrarRenovar && !mostrarEntregar) {
     return (
       <p className="text-sm text-texto-suave">
         Este pedido está {humanizar(pedido.estado).toLowerCase()} y no admite más acciones.
@@ -216,6 +221,11 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
       {mostrarActivar && (
         <Boton variante="primario" tamano="md" onClick={() => setConfirmando('activar')}>
           Activar servicio
+        </Boton>
+      )}
+      {mostrarEntregar && (
+        <Boton variante="primario" tamano="md" onClick={() => setModalEntregar(true)}>
+          📲 Entregar credenciales
         </Boton>
       )}
       {mostrarAsignarManual && (
@@ -262,6 +272,13 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
           setModalAsignar(false);
           onCambiado();
         }}
+      />
+
+      <ModalEntregarCredenciales
+        abierto={modalEntregar}
+        pedido={pedido}
+        onCerrar={() => setModalEntregar(false)}
+        onEntregado={onCambiado}
       />
 
       <ModalEntregaManual
@@ -614,6 +631,143 @@ function ModalEntregaManual({ abierto, pedido, onCerrar, onEntregado }) {
         {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>
+  );
+}
+
+/**
+ * Paso FINAL de entrega de credenciales (migración 021). Recién aquí se arma
+ * el mensaje para el cliente: datos de acceso + instrucciones + el bloque
+ * "Indicaciones importantes del servicio" (plantilla editable del servicio).
+ * Esas indicaciones NO aparecen en ninguna pantalla anterior. "Abrir WhatsApp"
+ * o "Copiar" registran la entrega en el historial (pestaña Entregas).
+ */
+function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
+  const [datos, setDatos] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+  const [registrado, setRegistrado] = useState(null); // 'whatsapp' | 'copiado'
+  const [registrando, setRegistrando] = useState(false);
+
+  useEffect(() => {
+    if (!abierto) return;
+    let vigente = true;
+    setDatos(null);
+    setError(null);
+    setRegistrado(null);
+    setCargando(true);
+    pedidosApi
+      .mensajeEntrega(pedido.id)
+      .then((r) => vigente && setDatos(r))
+      .catch((err) => vigente && setError(err?.message || 'No se pudo preparar el mensaje de entrega.'))
+      .finally(() => vigente && setCargando(false));
+    return () => {
+      vigente = false;
+    };
+  }, [abierto, pedido.id]);
+
+  async function registrar(canal) {
+    setRegistrando(true);
+    setError(null);
+    try {
+      await pedidosApi.registrarEntrega(pedido.id, canal);
+      setRegistrado(canal);
+      onEntregado();
+    } catch (err) {
+      setError(err?.message || 'La entrega no se pudo registrar en el historial.');
+    } finally {
+      setRegistrando(false);
+    }
+  }
+
+  function abrirWhatsApp() {
+    const numero = String(datos.cliente_whatsapp || '').replace(/[^0-9]/g, '');
+    // Se abre primero (dentro del clic) para que el navegador no bloquee la ventana.
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(datos.texto)}`, '_blank', 'noopener');
+    registrar('whatsapp');
+  }
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(datos.texto);
+      registrar('copiado');
+    } catch {
+      setError('No se pudo copiar al portapapeles. Selecciona el texto y cópialo a mano.');
+    }
+  }
+
+  return (
+    <Modal
+      abierto={abierto}
+      titulo="Entregar credenciales al cliente"
+      onCerrar={registrando ? undefined : onCerrar}
+      pie={
+        <>
+          <Boton variante="secundario" onClick={onCerrar} disabled={registrando}>
+            {registrado ? 'Cerrar' : 'Cancelar'}
+          </Boton>
+          <Boton variante="secundario" onClick={copiar} disabled={!datos || registrando}>
+            Copiar mensaje
+          </Boton>
+          <Boton onClick={abrirWhatsApp} disabled={!datos || !datos.cliente_whatsapp} cargando={registrando}>
+            Abrir WhatsApp
+          </Boton>
+        </>
+      }
+    >
+      {cargando ? (
+        <EstadoCarga />
+      ) : error && !datos ? (
+        <p className="text-sm text-red-400">{error}</p>
+      ) : datos ? (
+        <div className="space-y-3">
+          <p className="text-sm text-texto-suave">
+            Para {datos.cliente_nombre}
+            {datos.cliente_whatsapp ? ` · ${formatoWhatsapp(datos.cliente_whatsapp)}` : ' · sin WhatsApp registrado'}
+            {datos.advertencia_incluida ? ' · incluye las indicaciones de uso del servicio' : ''}
+          </p>
+          <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg border border-borde bg-superficie-alta p-3 text-sm text-texto">
+            {datos.texto}
+          </pre>
+          {registrado && (
+            <p className="text-sm text-green-400">
+              ✔ Entrega registrada ({registrado === 'whatsapp' ? 'enviada por WhatsApp' : 'mensaje copiado'}).
+            </p>
+          )}
+          {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+      ) : null}
+    </Modal>
+  );
+}
+
+/** GET /admin/pedidos/:id/entregas — historial de entregas de credenciales (sin secretos). */
+function PestanaEntregas({ pedidoId }) {
+  const { data, cargando, error, refetch } = useApi(() => pedidosApi.entregas(pedidoId), [pedidoId]);
+  const filas = Array.isArray(data) ? data : [];
+
+  if (error) return <EstadoError error={error} onReintentar={refetch} />;
+  if (cargando && !data) return <EstadoCarga />;
+  if (filas.length === 0) {
+    return <EstadoVacio titulo="Sin entregas" descripcion="Todavía no se entregaron las credenciales de este pedido." />;
+  }
+
+  return (
+    <Tabla
+      claveFila={(f) => f.id}
+      filas={filas}
+      columnas={[
+        { clave: 'creado_en', titulo: 'Fecha', render: (f) => fechaHora(f.creado_en) },
+        { clave: 'canal', titulo: 'Canal', render: (f) => (f.canal === 'whatsapp' ? 'WhatsApp' : 'Copiado') },
+        {
+          clave: 'advertencia_incluida',
+          titulo: 'Indicaciones de uso',
+          render: (f) => (f.advertencia_incluida ? <Etiqueta color="green">Incluidas</Etiqueta> : <Etiqueta>No aplica</Etiqueta>),
+        },
+        { clave: 'perfil', titulo: 'Perfil', render: (f) => [f.numero_perfil, f.nombre_perfil].filter(Boolean).join(' · ') || '—' },
+        { clave: 'version_credenciales', titulo: 'Credenciales', render: (f) => (f.version_credenciales ? `v${f.version_credenciales}` : '—') },
+        { clave: 'entregado_por_nombre', titulo: 'Entregó', render: (f) => f.entregado_por_nombre || '—' },
+      ]}
+    />
   );
 }
 

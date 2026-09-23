@@ -281,12 +281,17 @@ function ImagenServicio({ servicio, onCambiada }) {
   );
 }
 
-/** PUT /admin/servicios/:id — body parcial: { nombre?, descripcion?, categoria? }. */
+/**
+ * PUT /admin/servicios/:id — body parcial: { nombre?, descripcion?, categoria?, indicaciones_entrega? }.
+ * indicaciones_entrega (migración 021): se envía SOLO en el mensaje final de
+ * entrega de credenciales; vacío = ese servicio no lleva bloque de indicaciones.
+ */
 function ModalEditarServicio({ abierto, servicio, onCerrar, onGuardado }) {
   const [campos, setCampos] = useState(() => ({
     nombre: servicio.nombre || '',
     categoria: servicio.categoria || '',
     descripcion: servicio.descripcion || '',
+    indicaciones_entrega: servicio.indicaciones_entrega || '',
   }));
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
@@ -309,6 +314,7 @@ function ModalEditarServicio({ abierto, servicio, onCerrar, onGuardado }) {
         nombre: campos.nombre.trim(),
         categoria: campos.categoria.trim(),
         descripcion: campos.descripcion.trim(),
+        indicaciones_entrega: campos.indicaciones_entrega,
       });
       onGuardado();
     } catch (err) {
@@ -338,6 +344,18 @@ function ModalEditarServicio({ abierto, servicio, onCerrar, onGuardado }) {
         <Campo etiqueta="Nombre" name="nombre" value={campos.nombre} onChange={actualizar('nombre')} required autoFocus />
         <Campo etiqueta="Categoría" name="categoria" value={campos.categoria} onChange={actualizar('categoria')} />
         <Campo etiqueta="Descripción" name="descripcion" value={campos.descripcion} onChange={actualizar('descripcion')} />
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-texto-suave">
+            Indicaciones de uso (solo se envían al entregar las credenciales)
+          </span>
+          <textarea
+            className="w-full rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-sm text-texto outline-none transition placeholder:text-texto-suave/60 focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
+            rows={8}
+            value={campos.indicaciones_entrega}
+            onChange={actualizar('indicaciones_entrega')}
+            placeholder="Vacío = el mensaje de entrega de este servicio no lleva indicaciones."
+          />
+        </label>
         {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
     </Modal>

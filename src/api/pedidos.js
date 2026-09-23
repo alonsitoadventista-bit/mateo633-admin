@@ -46,3 +46,16 @@ export const cancelar = (id) => api.put(`/admin/pedidos/${id}/cancelar`);
 
 /** POST /admin/pedidos/:id/renovar — crea un pedido nuevo enlazado al anterior */
 export const renovar = (id) => api.post(`/admin/pedidos/${id}/renovar`);
+
+/**
+ * GET /admin/pedidos/:id/entrega — mensaje FINAL de entrega de credenciales
+ * (datos de acceso + instrucciones + indicaciones de uso del servicio).
+ * -> { texto, advertencia_incluida, cliente_nombre, cliente_whatsapp }
+ */
+export const mensajeEntrega = (id) => api.get(`/admin/pedidos/${id}/entrega`);
+
+/** POST /admin/pedidos/:id/entrega — body: { canal: 'whatsapp' | 'copiado' }. Registra la entrega en el historial. */
+export const registrarEntrega = (id, canal) => api.post(`/admin/pedidos/${id}/entrega`, { canal });
+
+/** GET /admin/pedidos/:id/entregas — historial de entregas de credenciales. */
+export const entregas = (id) => api.get(`/admin/pedidos/${id}/entregas`);
