@@ -39,3 +39,27 @@ export const asignarManual = (pedidoId, inventario_id) =>
  */
 export const entregaManual = (pedidoId, datos) =>
   api.put(`/admin/pedidos/${pedidoId}/inventario/entrega-manual`, datos);
+
+// --- Fase 3A: vista Cuenta (grilla de perfiles), PIN e historial ---
+
+/** GET /admin/inventario/cuentas/:cuentaId -> { cuenta, perfiles }. incluirSecretos agrega contraseña y PINs. */
+export const cuenta = (cuentaId, incluirSecretos = false) =>
+  api.get(`/admin/inventario/cuentas/${cuentaId}`, incluirSecretos ? { incluirSecretos: 'true' } : {});
+
+/** PUT /admin/inventario/cuentas/:cuentaId -- body: { max_perfiles?, notas_internas? } */
+export const actualizarCuenta = (cuentaId, datos) => api.put(`/admin/inventario/cuentas/${cuentaId}`, datos);
+
+/** POST /admin/inventario/cuentas/:cuentaId/completar-perfiles -- crea los perfiles que faltan hasta max_perfiles. */
+export const completarPerfiles = (cuentaId) => api.post(`/admin/inventario/cuentas/${cuentaId}/completar-perfiles`);
+
+/** GET /admin/inventario/cuentas/:cuentaId/historial */
+export const historialCuenta = (cuentaId) => api.get(`/admin/inventario/cuentas/${cuentaId}/historial`);
+
+/** PUT /admin/inventario/:id -- body: { nombre_perfil?, numero_perfil?, usa_pin?, pin?, generar_pin? } */
+export const actualizarPerfil = (id, datos) => api.put(`/admin/inventario/${id}`, datos);
+
+/** PUT /admin/inventario/:id/pin-ajustado -- confirma que el candado/PIN ya está aplicado en la plataforma. */
+export const pinAjustado = (id) => api.put(`/admin/inventario/${id}/pin-ajustado`);
+
+/** GET /admin/inventario/:id/historial -> { eventos, asignaciones } */
+export const historialPerfil = (id) => api.get(`/admin/inventario/${id}/historial`);

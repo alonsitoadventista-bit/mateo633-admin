@@ -12,6 +12,7 @@
  * esta lista).
  */
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import * as inventarioApi from '../../api/inventario';
 import * as serviciosApi from '../../api/servicios';
@@ -36,6 +37,7 @@ export function ListaInventario() {
   const [servicioFiltro, setServicioFiltro] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const navigate = useNavigate();
   const [modalAbierto, setModalAbierto] = useState(false);
 
   const { data: servicios } = useApi(() => serviciosApi.listar(), []);
@@ -51,7 +53,7 @@ export function ListaInventario() {
     const texto = busqueda.trim().toLowerCase();
     if (!texto) return filas;
     return filas.filter((f) =>
-      [f.identificador_cuenta, f.numero_perfil, f.proveedor, f.servicio_nombre].some(
+      [f.identificador_cuenta, f.numero_perfil, f.nombre_perfil, f.proveedor, f.servicio_nombre, f.cliente_nombre, f.cliente_whatsapp].some(
         (v) => v && String(v).toLowerCase().includes(texto)
       )
     );
@@ -74,7 +76,7 @@ export function ListaInventario() {
           <Campo
             etiqueta="Buscar"
             name="busqueda"
-            placeholder="Cuenta, perfil o proveedor…"
+            placeholder="Cuenta, perfil, cliente, WhatsApp o proveedor…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             className="sm:flex-1"
@@ -116,10 +118,26 @@ export function ListaInventario() {
           <Tabla
             claveFila={(f) => f.id}
             filas={filasFiltradas}
+            onFila={(f) => navigate(`/inventario/cuentas/${f.cuenta_servicio_id}`)}
             columnas={[
               { clave: 'servicio_nombre', titulo: 'Servicio' },
               { clave: 'identificador_cuenta', titulo: 'Cuenta', render: (f) => f.identificador_cuenta || '—' },
-              { clave: 'numero_perfil', titulo: 'Perfil', render: (f) => f.numero_perfil || '—' },
+              {
+                clave: 'numero_perfil',
+                titulo: 'Perfil',
+                render: (f) => [f.numero_perfil, f.nombre_perfil].filter(Boolean).join(' · ') || '—',
+              },
+              { clave: 'cliente_nombre', titulo: 'Cliente', render: (f) => f.cliente_nombre || '—' },
+              {
+                clave: 'usa_pin',
+                titulo: 'Candado',
+                render: (f) => (
+                  <span className="flex flex-wrap items-center gap-1">
+                    {f.usa_pin ? 'Con PIN' : 'Sin PIN'}
+                    {f.pin_estado === 'pendiente_ajuste' && <Etiqueta color="amber">⚠ ajustar</Etiqueta>}
+                  </span>
+                ),
+              },
               { clave: 'costo', titulo: 'Costo', render: (f) => (f.costo != null ? moneda(f.costo) : '—') },
               {
                 clave: 'estado',
