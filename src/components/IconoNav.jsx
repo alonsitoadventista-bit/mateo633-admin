@@ -51,6 +51,14 @@ const PATHS = {
       <path d="M9.5 11.5h5" />
     </>
   ),
+  proveedores: (
+    <>
+      <path d="M3.5 7.5h11v9h-11z" />
+      <path d="M14.5 10.5h3.2l2.8 2.8v3.2h-6z" />
+      <circle cx="7.5" cy="18.5" r="1.8" />
+      <circle cx="16.5" cy="18.5" r="1.8" />
+    </>
+  ),
   vendedores: (
     <>
       <circle cx="12" cy="8" r="3.2" />
