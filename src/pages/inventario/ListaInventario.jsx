@@ -153,6 +153,7 @@ export function ListaInventario() {
 
       <ModalNuevoInventario
         opcionesServicio={opcionesServicio}
+        servicios={servicios || []}
         abierto={modalAbierto}
         onCerrar={() => setModalAbierto(false)}
         onCreado={() => {
@@ -164,12 +165,18 @@ export function ListaInventario() {
   );
 }
 
-/** POST /admin/inventario — Fase 1: tipo_gestion siempre 'perfil'. */
-function ModalNuevoInventario({ opcionesServicio, abierto, onCerrar, onCreado }) {
+/**
+ * POST /admin/inventario — Fase 1: tipo_gestion siempre 'perfil'.
+ * Migración 020: la capacidad viene del SERVICIO elegido (Netflix 5,
+ * Disney+ 7...) y el backend crea los espacios solo; solo Apple TV+
+ * (miembros) pide la capacidad de la cuenta. Candado/PIN solo en perfiles.
+ */
+function ModalNuevoInventario({ opcionesServicio, servicios, abierto, onCerrar, onCreado }) {
   const [servicioId, setServicioId] = useState('');
   const [identificadorCuenta, setIdentificadorCuenta] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [numeroPerfil, setNumeroPerfil] = useState('');
+  const [capacidadCuenta, setCapacidadCuenta] = useState('');
   const [pinPerfil, setPinPerfil] = useState('');
   const [costo, setCosto] = useState('');
   const [fechaVence, setFechaVence] = useState('');
@@ -183,6 +190,7 @@ function ModalNuevoInventario({ opcionesServicio, abierto, onCerrar, onCreado })
     setIdentificadorCuenta('');
     setContrasena('');
     setNumeroPerfil('');
+    setCapacidadCuenta('');
     setPinPerfil('');
     setCosto('');
     setFechaVence('');
@@ -196,6 +204,12 @@ function ModalNuevoInventario({ opcionesServicio, abierto, onCerrar, onCreado })
     onCerrar();
   }
 
+  const servicio = servicios.find((s) => String(s.id) === String(servicioId));
+  const tipoEspacio = servicio?.tipo_espacio || 'perfil';
+  const usaPines = tipoEspacio === 'perfil';
+  const pideCapacidad = Boolean(servicio && !servicio.perfiles_por_cuenta && tipoEspacio === 'miembro');
+  const nombreEspacio = { perfil: 'perfil', cuenta_completa: 'usuario', miembro: 'miembro' }[tipoEspacio];
+
   async function enviar(e) {
     e.preventDefault();
     setCargando(true);
@@ -207,7 +221,8 @@ function ModalNuevoInventario({ opcionesServicio, abierto, onCerrar, onCreado })
         identificador_cuenta: identificadorCuenta.trim(),
         contrasena,
         numero_perfil: numeroPerfil.trim() || undefined,
-        pin_perfil: pinPerfil.trim() || undefined,
+        pin_perfil: usaPines ? pinPerfil.trim() || undefined : undefined,
+        max_perfiles: pideCapacidad && capacidadCuenta ? Number(capacidadCuenta) : undefined,
         costo: costo ? Number(costo) : undefined,
         fecha_vence: fechaVence || undefined,
         proveedor: proveedor.trim() || undefined,
@@ -248,6 +263,25 @@ function ModalNuevoInventario({ opcionesServicio, abierto, onCerrar, onCreado })
           onChange={(e) => setServicioId(e.target.value)}
           required
         />
+        {servicio?.perfiles_por_cuenta && (
+          <p className="rounded-lg border border-marca-500/30 bg-marca-500/10 px-3 py-2 text-xs text-texto">
+            {tipoEspacio === 'cuenta_completa'
+              ? `${servicio.nombre}: 1 usuario por cuenta (asignación directa al cliente, sin PIN).`
+              : `${servicio.nombre}: cada cuenta tiene ${servicio.perfiles_por_cuenta} perfiles. Si la cuenta es nueva, se crean los ${servicio.perfiles_por_cuenta} espacios automáticamente.`}
+          </p>
+        )}
+        {pideCapacidad && (
+          <Campo
+            etiqueta={`¿Cuántos miembros admite esta cuenta de ${servicio.nombre}?`}
+            name="max_perfiles"
+            type="number"
+            min={1}
+            max={20}
+            value={capacidadCuenta}
+            onChange={(e) => setCapacidadCuenta(e.target.value)}
+            required
+          />
+        )}
         <Campo
           etiqueta="Correo/usuario de la cuenta"
           name="identificador_cuenta"
@@ -264,19 +298,29 @@ function ModalNuevoInventario({ opcionesServicio, abierto, onCerrar, onCreado })
           onChange={(e) => setContrasena(e.target.value)}
           required
         />
-        <Campo
-          etiqueta="Número de perfil"
-          name="numero_perfil"
-          placeholder="1, 2, 3…"
-          value={numeroPerfil}
-          onChange={(e) => setNumeroPerfil(e.target.value)}
-        />
-        <Campo
-          etiqueta="PIN del perfil (opcional)"
-          name="pin_perfil"
-          value={pinPerfil}
-          onChange={(e) => setPinPerfil(e.target.value)}
-        />
+        {tipoEspacio !== 'cuenta_completa' && (
+          <Campo
+            etiqueta={
+              servicio?.perfiles_por_cuenta
+                ? `Número de ${nombreEspacio} (1 a ${servicio.perfiles_por_cuenta}; vacío = el primero libre)`
+                : `Número de ${nombreEspacio}`
+            }
+            name="numero_perfil"
+            placeholder="1, 2, 3…"
+            value={numeroPerfil}
+            onChange={(e) => setNumeroPerfil(e.target.value)}
+          />
+        )}
+        {usaPines && (
+          <Campo
+            etiqueta="PIN del perfil (opcional, 4 dígitos)"
+            name="pin_perfil"
+            inputMode="numeric"
+            maxLength={4}
+            value={pinPerfil}
+            onChange={(e) => setPinPerfil(e.target.value.replace(/[^0-9]/g, ''))}
+          />
+        )}
         <Campo
           etiqueta="Costo (opcional)"
           name="costo"

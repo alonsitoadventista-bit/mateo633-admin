@@ -111,6 +111,10 @@ export function DetalleCuenta() {
   if (!data) return null;
 
   const { cuenta, perfiles } = data;
+  // Migración 020: 'perfil' (candado/PIN), 'cuenta_completa' (1 usuario) o 'miembro' (Apple TV+).
+  const usaPines = (cuenta.tipo_espacio || 'perfil') === 'perfil';
+  const tituloEspacios =
+    { perfil: 'Perfiles', cuenta_completa: 'Usuario de la cuenta', miembro: 'Miembros' }[cuenta.tipo_espacio] || 'Perfiles';
   const pendientesAjuste = perfiles.filter((p) => p.pin_estado === 'pendiente_ajuste').length;
   // Capacidad efectiva: la FIJA del servicio (Netflix = 5) o la indicada en la cuenta.
   const faltanPerfiles = cuenta.capacidad ? Math.max(cuenta.capacidad - perfiles.length, 0) : 0;
@@ -130,7 +134,7 @@ export function DetalleCuenta() {
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Dato etiqueta="Proveedor" valor={cuenta.proveedor_nombre || cuenta.proveedor || '—'} />
           <Dato
-            etiqueta="Perfiles"
+            etiqueta={tituloEspacios}
             valor={
               <span className="flex items-center gap-2">
                 {perfiles.length}
@@ -174,7 +178,7 @@ export function DetalleCuenta() {
         {accionError && <p className="mt-3 text-xs text-red-400">{accionError}</p>}
       </Tarjeta>
 
-      <Tarjeta titulo="Perfiles">
+      <Tarjeta titulo={tituloEspacios}>
         {perfiles.length === 0 ? (
           <EstadoVacio titulo="Sin perfiles" descripcion="Indica la capacidad de la cuenta y crea sus perfiles." />
         ) : (
@@ -202,6 +206,9 @@ export function DetalleCuenta() {
                 titulo: 'Estado',
                 render: (p) => <Etiqueta color={COLOR_ESTADO_INVENTARIO[p.estado]}>{humanizar(p.estado)}</Etiqueta>,
               },
+              ...(!usaPines
+                ? []
+                : [
               {
                 clave: 'usa_pin',
                 titulo: 'Candado',
@@ -226,6 +233,7 @@ export function DetalleCuenta() {
                   </span>
                 ),
               },
+                  ]),
               {
                 clave: 'acciones',
                 titulo: '',
@@ -264,6 +272,7 @@ export function DetalleCuenta() {
 
       <ModalEditarPerfil
         perfil={perfilEditando}
+        usaPines={usaPines}
         onCerrar={() => setPerfilEditando(null)}
         onGuardado={() => {
           setPerfilEditando(null);
@@ -317,7 +326,7 @@ function TablaEventos({ eventos, conPerfil = false }) {
  * cambio de candado/PIN deja el perfil "pendiente de ajuste" hasta
  * confirmar que se aplicó en la plataforma.
  */
-function ModalEditarPerfil({ perfil, onCerrar, onGuardado }) {
+function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
   const [nombre, setNombre] = useState('');
   const [numero, setNumero] = useState('');
   const [usaPin, setUsaPin] = useState(false);
@@ -346,7 +355,9 @@ function ModalEditarPerfil({ perfil, onCerrar, onGuardado }) {
     setCargando(true);
     setError(null);
     try {
-      const datos = { nombre_perfil: nombre, numero_perfil: numero, usa_pin: usaPin };
+      const datos = usaPines
+        ? { nombre_perfil: nombre, numero_perfil: numero, usa_pin: usaPin }
+        : { nombre_perfil: nombre, numero_perfil: numero };
       if (usaPin && generar) datos.generar_pin = true;
       else if (usaPin && pin) datos.pin = pin;
       await inventarioApi.actualizarPerfil(perfil.id, datos);
@@ -384,11 +395,13 @@ function ModalEditarPerfil({ perfil, onCerrar, onGuardado }) {
             Cliente: {perfil.cliente_nombre || 'sin asignar'}
             {perfil.preferencia_pin && ` · pidió ${perfil.preferencia_pin === 'con_pin' ? 'perfil con PIN' : 'perfil sin candado'}`}
           </p>
-          <label className="flex items-center gap-2 text-sm text-texto">
-            <input type="checkbox" checked={usaPin} onChange={(e) => setUsaPin(e.target.checked)} />
-            Usa candado (PIN de 4 dígitos)
-          </label>
-          {usaPin && (
+          {usaPines && (
+            <label className="flex items-center gap-2 text-sm text-texto">
+              <input type="checkbox" checked={usaPin} onChange={(e) => setUsaPin(e.target.checked)} />
+              Usa candado (PIN de 4 dígitos)
+            </label>
+          )}
+          {usaPines && usaPin && (
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm text-texto">
                 <input type="checkbox" checked={generar} onChange={(e) => setGenerar(e.target.checked)} />
@@ -494,7 +507,7 @@ function ModalCapacidad({ abierto, cuenta, onCerrar, onGuardado }) {
     >
       <form id="form-capacidad" onSubmit={enviar} className="space-y-3">
         <Campo
-          etiqueta="¿Cuántos perfiles tiene esta cuenta? (ej. Netflix = 5)"
+          etiqueta={cuenta.tipo_espacio === 'miembro' ? '¿Cuántos miembros admite esta cuenta?' : '¿Cuántos perfiles tiene esta cuenta?'}
           name="max_perfiles"
           type="number"
           min={1}
