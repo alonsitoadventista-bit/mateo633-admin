@@ -7,6 +7,9 @@
  * historial de cambios. Ver docs/DISENO_INVENTARIO_REPOSICIONES.md §2-§3,
  * §7 (backend).
  *
+ * Capacidad (migración 020): en servicios de capacidad fija (Netflix = 5)
+ * los N espacios los crea el sistema y la capacidad no se edita por cuenta.
+ *
  * El cliente y el WhatsApp NO se editan aquí: vienen en vivo del pedido
  * asignado (perfil -> pedido -> cliente). Los PIN y la contraseña solo
  * se traen del backend al pulsar "Ver secretos".
@@ -31,6 +34,7 @@ import { fecha, fechaHora, humanizar, moneda, whatsapp as formatoWhatsapp } from
 
 const TEXTO_EVENTO = {
   creado: 'Perfil creado',
+  configurado: 'Datos del perfil cargados',
   asignado: 'Asignado a cliente',
   liberado: 'Liberado del pedido',
   habilitado: 'Vuelve a estar disponible',
@@ -108,7 +112,8 @@ export function DetalleCuenta() {
 
   const { cuenta, perfiles } = data;
   const pendientesAjuste = perfiles.filter((p) => p.pin_estado === 'pendiente_ajuste').length;
-  const faltanPerfiles = cuenta.max_perfiles ? Math.max(cuenta.max_perfiles - perfiles.length, 0) : 0;
+  // Capacidad efectiva: la FIJA del servicio (Netflix = 5) o la indicada en la cuenta.
+  const faltanPerfiles = cuenta.capacidad ? Math.max(cuenta.capacidad - perfiles.length, 0) : 0;
 
   return (
     <div className="space-y-4">
@@ -129,10 +134,14 @@ export function DetalleCuenta() {
             valor={
               <span className="flex items-center gap-2">
                 {perfiles.length}
-                {cuenta.max_perfiles ? ` / ${cuenta.max_perfiles}` : ' (capacidad sin indicar)'}
-                <button className="text-xs text-marca-500 hover:underline" onClick={() => setModalCapacidad(true)}>
-                  editar
-                </button>
+                {cuenta.capacidad ? ` / ${cuenta.capacidad}` : ' (capacidad sin indicar)'}
+                {cuenta.capacidad_fija ? (
+                  <span className="text-xs text-texto-suave">· fijo por {cuenta.servicio_nombre}</span>
+                ) : (
+                  <button className="text-xs text-marca-500 hover:underline" onClick={() => setModalCapacidad(true)}>
+                    editar
+                  </button>
+                )}
               </span>
             }
           />
