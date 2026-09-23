@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import * as inventarioApi from '../../api/inventario';
 import * as serviciosApi from '../../api/servicios';
+import { filtrarInventario } from './busquedaInventario';
 import {
   Tarjeta,
   Tabla,
@@ -49,15 +50,8 @@ export function ListaInventario() {
   const filas = Array.isArray(data) ? data : [];
   const opcionesServicio = (servicios || []).filter((s) => s.activo).map((s) => ({ valor: s.id, texto: s.nombre }));
 
-  const filasFiltradas = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase();
-    if (!texto) return filas;
-    return filas.filter((f) =>
-      [f.identificador_cuenta, f.numero_perfil, f.nombre_perfil, f.proveedor, f.servicio_nombre, f.cliente_nombre, f.cliente_whatsapp].some(
-        (v) => v && String(v).toLowerCase().includes(texto)
-      )
-    );
-  }, [filas, busqueda]);
+  // Uno o varios valores separados por coma (ver busquedaInventario.js): sin duplicados, en una sola lista.
+  const { filas: filasFiltradas, conteos } = useMemo(() => filtrarInventario(filas, busqueda), [filas, busqueda]);
 
   return (
     <div className="space-y-4">
@@ -76,7 +70,7 @@ export function ListaInventario() {
           <Campo
             etiqueta="Buscar"
             name="busqueda"
-            placeholder="Cuenta, perfil, cliente, WhatsApp o proveedor…"
+            placeholder="Cuenta, perfil, cliente, WhatsApp o proveedor… (varios: separa con comas)"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             className="sm:flex-1"
@@ -100,6 +94,17 @@ export function ListaInventario() {
             className="sm:w-48"
           />
         </div>
+
+        {conteos.length > 0 && (
+          <p className="-mt-2 mb-4 flex flex-wrap gap-x-3 gap-y-1 text-xs text-texto-suave">
+            <span>Búsqueda múltiple:</span>
+            {conteos.map((c) => (
+              <span key={c.valor} className={c.cantidad === 0 ? 'text-amber-400' : undefined}>
+                {c.valor} ({c.cantidad})
+              </span>
+            ))}
+          </p>
+        )}
 
         {error ? (
           <EstadoError error={error} onReintentar={refetch} />
