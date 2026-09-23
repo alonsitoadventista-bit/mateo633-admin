@@ -2,13 +2,16 @@
  * pages/inventario/ListaInventario.jsx
  * -----------------------------------------
  * Fase 1: solo tipo_gestion='perfil' (Netflix, Disney+, Max, Amazon
- * Prime Video). Filtro por servicio/estado (servidor). Alta vía modal:
- * servicio + identificador de la cuenta + contraseña + número de
- * perfil + costo/fechas/proveedor opcionales. Sin detalle por id --
- * mismo criterio que Auditoría/Configuración (no hay un "detalle"
- * navegable propio, solo esta lista).
+ * Prime Video). Filtro por servicio/estado (servidor) + búsqueda por
+ * cuenta/perfil/proveedor (cliente, sobre la lista ya cargada -- mismo
+ * criterio que ListaClientes.jsx, el backend no expone búsqueda de
+ * texto en este endpoint). Alta vía modal: servicio + identificador de
+ * la cuenta + contraseña + número de perfil + costo/fechas/proveedor
+ * opcionales. Sin detalle por id -- mismo criterio que
+ * Auditoría/Configuración (no hay un "detalle" navegable propio, solo
+ * esta lista).
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import * as inventarioApi from '../../api/inventario';
 import * as serviciosApi from '../../api/servicios';
@@ -32,6 +35,7 @@ const ESTADOS_INVENTARIO = ['disponible', 'asignado', 'vencido', 'bloqueado'];
 export function ListaInventario() {
   const [servicioFiltro, setServicioFiltro] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
+  const [busqueda, setBusqueda] = useState('');
   const [modalAbierto, setModalAbierto] = useState(false);
 
   const { data: servicios } = useApi(() => serviciosApi.listar(), []);
@@ -42,6 +46,16 @@ export function ListaInventario() {
 
   const filas = Array.isArray(data) ? data : [];
   const opcionesServicio = (servicios || []).filter((s) => s.activo).map((s) => ({ valor: s.id, texto: s.nombre }));
+
+  const filasFiltradas = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+    if (!texto) return filas;
+    return filas.filter((f) =>
+      [f.identificador_cuenta, f.numero_perfil, f.proveedor, f.servicio_nombre].some(
+        (v) => v && String(v).toLowerCase().includes(texto)
+      )
+    );
+  }, [filas, busqueda]);
 
   return (
     <div className="space-y-4">
@@ -57,6 +71,14 @@ export function ListaInventario() {
 
       <Tarjeta>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Campo
+            etiqueta="Buscar"
+            name="busqueda"
+            placeholder="Cuenta, perfil o proveedor…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="sm:flex-1"
+          />
           <Selector
             etiqueta="Servicio"
             name="servicio"
@@ -81,11 +103,11 @@ export function ListaInventario() {
           <EstadoError error={error} onReintentar={refetch} />
         ) : cargando && !data ? (
           <EstadoCarga />
-        ) : filas.length === 0 ? (
+        ) : filasFiltradas.length === 0 ? (
           <EstadoVacio
             titulo="Sin inventario"
             descripcion={
-              servicioFiltro || estadoFiltro
+              busqueda || servicioFiltro || estadoFiltro
                 ? 'Nada coincide con el filtro actual.'
                 : 'Todavía no se cargó ningún perfil. Usa "+ Nuevo perfil".'
             }
@@ -93,7 +115,7 @@ export function ListaInventario() {
         ) : (
           <Tabla
             claveFila={(f) => f.id}
-            filas={filas}
+            filas={filasFiltradas}
             columnas={[
               { clave: 'servicio_nombre', titulo: 'Servicio' },
               { clave: 'identificador_cuenta', titulo: 'Cuenta', render: (f) => f.identificador_cuenta || '—' },
