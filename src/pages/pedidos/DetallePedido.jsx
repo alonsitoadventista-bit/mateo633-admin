@@ -124,7 +124,15 @@ export function DetallePedido() {
         <Tarjeta titulo="Perfil del inventario">
           {inventario ? (
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Dato etiqueta="Identificador de la cuenta" valor={inventario.identificador_cuenta || '—'} />
+              <Dato
+                etiqueta="Identificador de la cuenta"
+                valor={
+                  <span className="flex flex-wrap items-center gap-1">
+                    {inventario.identificador_cuenta || '—'}
+                    {inventario.cuenta_eliminada_en && <Etiqueta color="red">cuenta eliminada</Etiqueta>}
+                  </span>
+                }
+              />
               <Dato etiqueta="Perfil" valor={inventario.numero_perfil || '—'} />
               <Dato
                 etiqueta="Estado del inventario"

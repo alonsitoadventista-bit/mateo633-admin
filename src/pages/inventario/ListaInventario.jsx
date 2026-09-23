@@ -38,13 +38,20 @@ export function ListaInventario() {
   const [servicioFiltro, setServicioFiltro] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [mostrarEliminadas, setMostrarEliminadas] = useState(false);
   const navigate = useNavigate();
   const [modalAbierto, setModalAbierto] = useState(false);
 
   const { data: servicios } = useApi(() => serviciosApi.listar(), []);
   const { data, cargando, error, refetch } = useApi(
-    () => inventarioApi.listar({ servicio_id: servicioFiltro || undefined, estado: estadoFiltro || undefined }),
-    [servicioFiltro, estadoFiltro]
+    () =>
+      inventarioApi.listar({
+        servicio_id: servicioFiltro || undefined,
+        estado: estadoFiltro || undefined,
+        // Migración 022: las cuentas eliminadas (lógicamente) se ocultan salvo que se pidan.
+        incluir_eliminadas: mostrarEliminadas ? 'true' : undefined,
+      }),
+    [servicioFiltro, estadoFiltro, mostrarEliminadas]
   );
 
   const filas = Array.isArray(data) ? data : [];
@@ -93,6 +100,10 @@ export function ListaInventario() {
             onChange={(e) => setEstadoFiltro(e.target.value)}
             className="sm:w-48"
           />
+          <label className="flex items-center gap-2 pb-2 text-sm text-texto-suave sm:whitespace-nowrap">
+            <input type="checkbox" checked={mostrarEliminadas} onChange={(e) => setMostrarEliminadas(e.target.checked)} />
+            Mostrar eliminadas
+          </label>
         </div>
 
         {conteos.length > 0 && (
@@ -126,7 +137,16 @@ export function ListaInventario() {
             onFila={(f) => navigate(`/inventario/cuentas/${f.cuenta_servicio_id}`)}
             columnas={[
               { clave: 'servicio_nombre', titulo: 'Servicio' },
-              { clave: 'identificador_cuenta', titulo: 'Cuenta', render: (f) => f.identificador_cuenta || '—' },
+              {
+                clave: 'identificador_cuenta',
+                titulo: 'Cuenta',
+                render: (f) => (
+                  <span className="flex flex-wrap items-center gap-1">
+                    {f.identificador_cuenta || '—'}
+                    {f.cuenta_eliminada_en && <Etiqueta color="red">eliminada</Etiqueta>}
+                  </span>
+                ),
+              },
               {
                 clave: 'numero_perfil',
                 titulo: 'Perfil',

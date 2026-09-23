@@ -17,6 +17,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
+import { useAuth } from '../../auth/useAuth';
 import * as inventarioApi from '../../api/inventario';
 import {
   Tarjeta,
@@ -48,6 +49,8 @@ const TEXTO_EVENTO = {
   repuesto_desde: 'Repuesto desde otro perfil',
   repuesto_hacia: 'Repuesto hacia otro perfil',
   bloqueado: 'Bloqueado',
+  cuenta_eliminada: 'Cuenta eliminada',
+  cuenta_restaurada: 'Cuenta restaurada',
 };
 
 const textoEvento = (tipo) => TEXTO_EVENTO[tipo] || humanizar(tipo);
@@ -67,6 +70,9 @@ export function DetalleCuenta() {
   const [modalCapacidad, setModalCapacidad] = useState(false);
   const [accionError, setAccionError] = useState(null);
   const [ocupado, setOcupado] = useState(null);
+  const [modalEliminar, setModalEliminar] = useState(false);
+  const { tienePermiso } = useAuth();
+  const esAdministrador = tienePermiso(['administrador']);
 
   function recargar() {
     refetch();
@@ -118,6 +124,9 @@ export function DetalleCuenta() {
   const pendientesAjuste = perfiles.filter((p) => p.pin_estado === 'pendiente_ajuste').length;
   // Capacidad efectiva: la FIJA del servicio (Netflix = 5) o la indicada en la cuenta.
   const faltanPerfiles = cuenta.capacidad ? Math.max(cuenta.capacidad - perfiles.length, 0) : 0;
+  // Migración 022: eliminación LÓGICA -- no se permite con clientes activos (perfiles asignados).
+  const eliminada = Boolean(cuenta.eliminada_en);
+  const asignados = perfiles.filter((p) => p.estado === 'asignado').length;
 
   return (
     <div className="space-y-4">
@@ -126,11 +135,37 @@ export function DetalleCuenta() {
       <Tarjeta
         titulo={`${cuenta.servicio_nombre} · ${cuenta.identificador_cuenta}`}
         acciones={
-          <Boton variante="secundario" tamano="sm" onClick={() => setVerSecretos((v) => !v)}>
-            {verSecretos ? '🙈 Ocultar secretos' : '👁 Ver secretos'}
-          </Boton>
+          <div className="flex flex-wrap gap-2">
+            <Boton variante="secundario" tamano="sm" onClick={() => setVerSecretos((v) => !v)}>
+              {verSecretos ? '🙈 Ocultar secretos' : '👁 Ver secretos'}
+            </Boton>
+            {esAdministrador && !eliminada && (
+              <Boton variante="peligro" tamano="sm" onClick={() => setModalEliminar(true)}>
+                Eliminar cuenta
+              </Boton>
+            )}
+          </div>
         }
       >
+        {eliminada && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-texto">
+            <span>
+              🗑 Cuenta eliminada el {fechaHora(cuenta.eliminada_en)}
+              {cuenta.eliminada_por_nombre ? ` por ${cuenta.eliminada_por_nombre}` : ''} · Motivo: {cuenta.motivo_eliminacion || '—'}.
+              No se ofrece para asignar; su historial se conserva.
+            </span>
+            {esAdministrador && (
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                cargando={ocupado === 'restaurar'}
+                onClick={() => ejecutar('restaurar', () => inventarioApi.restaurarCuenta(cuenta.id))}
+              >
+                Restaurar cuenta
+              </Boton>
+            )}
+          </div>
+        )}
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Dato etiqueta="Proveedor" valor={cuenta.proveedor_nombre || cuenta.proveedor || '—'} />
           <Dato
@@ -163,7 +198,7 @@ export function DetalleCuenta() {
             {pendientesAjuste > 0 && (
               <Etiqueta color="amber">⚠ {pendientesAjuste} perfil(es) con PIN pendiente de ajuste</Etiqueta>
             )}
-            {faltanPerfiles > 0 && (
+            {faltanPerfiles > 0 && !eliminada && (
               <Boton
                 variante="secundario"
                 tamano="sm"
@@ -280,6 +315,16 @@ export function DetalleCuenta() {
         }}
       />
       <ModalHistorialPerfil perfil={perfilHistorial} onCerrar={() => setPerfilHistorial(null)} />
+      <ModalEliminarCuenta
+        abierto={modalEliminar}
+        cuenta={cuenta}
+        asignados={asignados}
+        onCerrar={() => setModalEliminar(false)}
+        onEliminada={() => {
+          setModalEliminar(false);
+          recargar();
+        }}
+      />
       <ModalCapacidad
         abierto={modalCapacidad}
         cuenta={cuenta}
@@ -421,6 +466,88 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
           {error && <p className="text-xs text-red-400">{error}</p>}
         </form>
       )}
+    </Modal>
+  );
+}
+
+/**
+ * POST /admin/inventario/cuentas/:id/eliminar — eliminación LÓGICA: no borra
+ * nada; la cuenta deja de ofrecerse para asignar y todo su historial
+ * (perfiles, asignaciones, entregas, pedidos) se conserva. Se puede restaurar.
+ * Bloqueada mientras haya perfiles asignados a clientes activos.
+ */
+function ModalEliminarCuenta({ abierto, cuenta, asignados, onCerrar, onEliminada }) {
+  const [motivo, setMotivo] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+
+  function cerrar() {
+    setMotivo('');
+    setError(null);
+    onCerrar();
+  }
+
+  async function enviar(e) {
+    e.preventDefault();
+    setCargando(true);
+    setError(null);
+    try {
+      await inventarioApi.eliminarCuenta(cuenta.id, motivo.trim());
+      setMotivo('');
+      onEliminada();
+    } catch (err) {
+      setError(err?.message || 'No se pudo eliminar la cuenta.');
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <Modal
+      abierto={abierto}
+      titulo="Eliminar cuenta"
+      onCerrar={cargando ? undefined : cerrar}
+      pie={
+        <>
+          <Boton variante="secundario" onClick={cerrar} disabled={cargando}>
+            Cancelar
+          </Boton>
+          <Boton
+            variante="peligro"
+            type="submit"
+            form="form-eliminar-cuenta"
+            cargando={cargando}
+            disabled={asignados > 0 || motivo.trim().length < 3}
+          >
+            Eliminar cuenta
+          </Boton>
+        </>
+      }
+    >
+      <form id="form-eliminar-cuenta" onSubmit={enviar} className="space-y-4">
+        {asignados > 0 ? (
+          <p className="text-sm text-red-400">
+            Esta cuenta tiene {asignados} perfil(es) asignado(s) a clientes activos. Libéralos o repónlos antes de eliminarla.
+          </p>
+        ) : (
+          <p className="text-sm text-texto-suave">
+            La cuenta {cuenta.identificador_cuenta} dejará de ofrecerse para asignar. No se borra nada: su historial de
+            clientes, asignaciones y entregas se conserva, y se puede restaurar cuando quieras.
+          </p>
+        )}
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-texto-suave">Motivo (obligatorio)</span>
+          <textarea
+            className="w-full rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-sm text-texto outline-none transition placeholder:text-texto-suave/60 focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
+            rows={3}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ej.: cuenta caída, proveedor la dio de baja, cargada por error…"
+            disabled={asignados > 0}
+          />
+        </label>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </form>
     </Modal>
   );
 }

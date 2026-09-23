@@ -9,7 +9,7 @@
  */
 import { api } from './client';
 
-/** GET /admin/inventario?servicio_id=&estado= */
+/** GET /admin/inventario?servicio_id=&estado=&incluir_eliminadas=true */
 export const listar = (filtros = {}) => api.get('/admin/inventario', filtros);
 
 /** POST /admin/inventario -- body: { servicio_id, tipo_gestion?, identificador_cuenta, contrasena, numero_perfil?, pin_perfil?, costo?, fecha_inicio?, fecha_vence?, proveedor?, celular_proveedor?, notas_internas? } */
@@ -60,6 +60,12 @@ export const actualizarPerfil = (id, datos) => api.put(`/admin/inventario/${id}`
 
 /** PUT /admin/inventario/:id/pin-ajustado -- confirma que el candado/PIN ya está aplicado en la plataforma. */
 export const pinAjustado = (id) => api.put(`/admin/inventario/${id}/pin-ajustado`);
+
+/** POST /admin/inventario/cuentas/:cuentaId/eliminar -- body: { motivo }. Eliminación LÓGICA (conserva el historial). Solo administrador. */
+export const eliminarCuenta = (cuentaId, motivo) => api.post(`/admin/inventario/cuentas/${cuentaId}/eliminar`, { motivo });
+
+/** POST /admin/inventario/cuentas/:cuentaId/restaurar -- deshace la eliminación lógica. Solo administrador. */
+export const restaurarCuenta = (cuentaId) => api.post(`/admin/inventario/cuentas/${cuentaId}/restaurar`);
 
 /** GET /admin/inventario/:id/historial -> { eventos, asignaciones } */
 export const historialPerfil = (id) => api.get(`/admin/inventario/${id}/historial`);
