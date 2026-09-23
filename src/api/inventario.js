@@ -55,7 +55,7 @@ export const completarPerfiles = (cuentaId) => api.post(`/admin/inventario/cuent
 /** GET /admin/inventario/cuentas/:cuentaId/historial */
 export const historialCuenta = (cuentaId) => api.get(`/admin/inventario/cuentas/${cuentaId}/historial`);
 
-/** PUT /admin/inventario/:id -- body: { nombre_perfil?, numero_perfil?, usa_pin?, pin?, generar_pin? } */
+/** PUT /admin/inventario/:id -- body: { nombre_perfil?, numero_perfil?, usa_pin?, pin? } (PIN siempre manual, 4 dígitos) */
 export const actualizarPerfil = (id, datos) => api.put(`/admin/inventario/${id}`, datos);
 
 /** PUT /admin/inventario/:id/pin-ajustado -- confirma que el candado/PIN ya está aplicado en la plataforma. */

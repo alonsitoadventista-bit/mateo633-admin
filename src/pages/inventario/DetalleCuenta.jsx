@@ -331,7 +331,6 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
   const [numero, setNumero] = useState('');
   const [usaPin, setUsaPin] = useState(false);
   const [pin, setPin] = useState('');
-  const [generar, setGenerar] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [perfilCargado, setPerfilCargado] = useState(null);
@@ -343,12 +342,14 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
     setNumero(perfil.numero_perfil || '');
     setUsaPin(Boolean(perfil.usa_pin));
     setPin('');
-    setGenerar(false);
     setError(null);
   }
   if (!perfil && perfilCargado) setPerfilCargado(null);
 
-  const pinInvalido = usaPin && !generar && pin !== '' && !/^[0-9]{4}$/.test(pin);
+  // PIN siempre manual: obligatorio al activar el candado; si ya tenía, vacío = conservar el actual.
+  const pinFormatoInvalido = usaPin && pin !== '' && !/^[0-9]{4}$/.test(pin);
+  const pinFaltante = usaPines && usaPin && !perfil?.usa_pin && pin === '';
+  const pinInvalido = pinFormatoInvalido || pinFaltante;
 
   async function enviar(e) {
     e.preventDefault();
@@ -358,8 +359,7 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
       const datos = usaPines
         ? { nombre_perfil: nombre, numero_perfil: numero, usa_pin: usaPin }
         : { nombre_perfil: nombre, numero_perfil: numero };
-      if (usaPin && generar) datos.generar_pin = true;
-      else if (usaPin && pin) datos.pin = pin;
+      if (usaPin && pin) datos.pin = pin;
       await inventarioApi.actualizarPerfil(perfil.id, datos);
       onGuardado();
     } catch (err) {
@@ -403,21 +403,15 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
           )}
           {usaPines && usaPin && (
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm text-texto">
-                <input type="checkbox" checked={generar} onChange={(e) => setGenerar(e.target.checked)} />
-                Generar un PIN nuevo automáticamente
-              </label>
-              {!generar && (
-                <Campo
-                  etiqueta={perfil.usa_pin ? 'Nuevo PIN (vacío = conservar el actual)' : 'PIN (vacío = generar uno)'}
-                  name="pin"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
-                  error={pinInvalido ? 'El PIN debe tener exactamente 4 dígitos' : undefined}
-                />
-              )}
+              <Campo
+                etiqueta={perfil.usa_pin ? 'Nuevo PIN (vacío = conservar el actual)' : 'PIN de 4 dígitos (obligatorio)'}
+                name="pin"
+                inputMode="numeric"
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
+                error={pinFormatoInvalido ? 'El PIN debe tener exactamente 4 dígitos' : undefined}
+              />
             </div>
           )}
           <p className="text-xs text-texto-suave">
