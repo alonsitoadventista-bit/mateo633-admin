@@ -41,3 +41,15 @@ export const listado = (filtros) => api.get('/admin/clientes/listado', filtros);
 
 /** GET /admin/clientes/:id/resumen — resumen rápido, próxima acción y etiquetas de la ficha */
 export const resumen = (id) => api.get(`/admin/clientes/${id}/resumen`);
+
+/** GET /admin/clientes/:id/servicios — vigentes y pendientes, con perfil asignado (sin contraseñas) */
+export const servicios = (id) => api.get(`/admin/clientes/${id}/servicios`);
+
+/** GET /admin/clientes/:id/historial — línea de tiempo del cliente y sus pedidos */
+export const historial = (id) => api.get(`/admin/clientes/${id}/historial`);
+
+/** GET /admin/clientes/:id/comunicaciones — entregas de credenciales y recordatorios automáticos */
+export const comunicaciones = (id) => api.get(`/admin/clientes/${id}/comunicaciones`);
+
+/** GET /admin/clientes/:id/mensajes — mensajes preparados: recordar_renovacion, recuperar_cliente, bienvenida */
+export const mensajes = (id) => api.get(`/admin/clientes/${id}/mensajes`);
