@@ -1,30 +1,39 @@
 /**
- * pages/clientes/DetalleCliente.jsx  (Fase 3)
+ * pages/clientes/DetalleCliente.jsx  (Clientes CRM, F1 — 2026-09-24)
  * -----------------------------------------
- * Detalle de un cliente: datos + edición (PUT /admin/clientes/:id),
- * cambio de estado (PUT /admin/clientes/:id/estado) y pestañas de
- * historial (pedidos, pagos confirmados, recordatorios), cada una
- * sobre su propio endpoint ya existente en api/clientes.js.
+ * Ficha del cliente:
+ * - resumen rápido + próxima acción recomendada + etiquetas
+ *   (GET /admin/clientes/:id/resumen, calculado en el backend en hora de Lima);
+ * - edición de datos (PUT /admin/clientes/:id; el correo se puede borrar);
+ * - acceso al panel/app (PUT /admin/clientes/:id/estado), que antes se
+ *   llamaba "estado" y ahora se distingue del estado COMERCIAL;
+ * - pestañas de historial (pedidos, pagos confirmados, recordatorios) sobre
+ *   sus endpoints existentes. Se rehacen en F2 (historial, pagos y servicios).
  */
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import * as clientesApi from '../../api/clientes';
 import {
-  Tarjeta,
   Tabla,
   Boton,
-  Campo,
   Selector,
   Etiqueta,
-  Modal,
   DialogoConfirmacion,
   EstadoCarga,
   EstadoError,
   EstadoVacio,
 } from '../../components/ui';
-import { ESTADOS_CLIENTE, COLOR_ESTADO_CLIENTE, COLOR_ESTADO_PEDIDO } from '../../utils/constantes';
-import { fecha, fechaHora, humanizar, moneda, whatsapp as formatoWhatsapp } from '../../utils/formato';
+import {
+  ESTADOS_CLIENTE,
+  COLOR_ESTADO_CLIENTE,
+  COLOR_ESTADO_PEDIDO,
+  TEXTO_ACCESO_CLIENTE,
+} from '../../utils/constantes';
+import { fecha, fechaHora, humanizar, moneda } from '../../utils/formato';
+import { ResumenCliente } from './componentes/ResumenCliente.jsx';
+import { TarjetaProximaAccion } from './componentes/ProximaAccion.jsx';
+import { ModalEditarCliente } from './componentes/ModalEditarCliente.jsx';
 
 const PESTANAS = [
   { clave: 'pedidos', titulo: 'Pedidos' },
@@ -34,7 +43,7 @@ const PESTANAS = [
 
 export function DetalleCliente() {
   const { id } = useParams();
-  const { data: cliente, cargando, error, refetch } = useApi(() => clientesApi.detalle(id), [id]);
+  const { data: r, cargando, error, refetch } = useApi(() => clientesApi.resumen(id), [id]);
 
   const [modalEditar, setModalEditar] = useState(false);
   const [pestana, setPestana] = useState('pedidos');
@@ -48,7 +57,7 @@ export function DetalleCliente() {
     );
   }
 
-  if (cargando && !cliente) {
+  if (cargando && !r) {
     return (
       <div className="space-y-4">
         <BotonVolver />
@@ -57,34 +66,26 @@ export function DetalleCliente() {
     );
   }
 
-  if (!cliente) return null;
+  if (!r) return null;
 
   return (
     <div className="space-y-4">
       <BotonVolver />
 
-      <Tarjeta
-        titulo="Datos del cliente"
-        acciones={
-          <Boton variante="secundario" tamano="sm" onClick={() => setModalEditar(true)}>
-            Editar datos
-          </Boton>
-        }
-      >
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Dato etiqueta="Nombre" valor={cliente.nombre} />
-          <Dato etiqueta="WhatsApp" valor={formatoWhatsapp(cliente.whatsapp)} />
-          <Dato etiqueta="Email" valor={cliente.email || '—'} />
-          <Dato etiqueta="Registrado" valor={fecha(cliente.fecha_registro)} />
-        </dl>
-
-        <div className="mt-4 border-t border-borde pt-4">
-          <ControlEstado cliente={cliente} onCambiado={refetch} />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <ResumenCliente r={r} onEditar={() => setModalEditar(true)} />
         </div>
-      </Tarjeta>
+        <div className="space-y-4">
+          <TarjetaProximaAccion accion={r.proxima_accion} whatsapp={r.whatsapp} />
+          <section className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#16171b] to-[#0e0f12] p-5">
+            <ControlAcceso cliente={{ id: r.id, nombre: r.nombre, estado: r.acceso }} onCambiado={refetch} />
+          </section>
+        </div>
+      </div>
 
-      <Tarjeta>
-        <div className="mb-3 flex gap-1 border-b border-borde">
+      <section className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#16171b] to-[#0e0f12] p-5">
+        <div className="mb-3 flex gap-1 overflow-x-auto border-b border-borde">
           {PESTANAS.map((p) => (
             <button
               key={p.clave}
@@ -103,11 +104,11 @@ export function DetalleCliente() {
         {pestana === 'pedidos' && <PestanaPedidos clienteId={id} />}
         {pestana === 'pagos' && <PestanaPagos clienteId={id} />}
         {pestana === 'recordatorios' && <PestanaRecordatorios clienteId={id} />}
-      </Tarjeta>
+      </section>
 
       <ModalEditarCliente
         abierto={modalEditar}
-        cliente={cliente}
+        cliente={r}
         onCerrar={() => setModalEditar(false)}
         onGuardado={() => {
           setModalEditar(false);
@@ -126,53 +127,49 @@ export function DetalleCliente() {
   }
 }
 
-function Dato({ etiqueta, valor }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-texto-suave">{etiqueta}</dt>
-      <dd className="mt-0.5 text-sm text-texto">{valor}</dd>
-    </div>
-  );
-}
-
-/** PUT /admin/clientes/:id/estado — cambia solo el estado, separado de la edición de datos. */
-function ControlEstado({ cliente, onCambiado }) {
+/**
+ * PUT /admin/clientes/:id/estado — "Acceso" del cliente (clientes.estado:
+ * activo/inactivo/bloqueado), separado de la edición de datos y del estado comercial.
+ */
+function ControlAcceso({ cliente, onCambiado }) {
   const [nuevoEstado, setNuevoEstado] = useState(cliente.estado);
   const [confirmando, setConfirmando] = useState(false);
 
   const hayCambio = nuevoEstado !== cliente.estado;
+  const texto = (e) => TEXTO_ACCESO_CLIENTE[e] || humanizar(e);
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-texto-suave">Estado actual</p>
-        <Etiqueta color={COLOR_ESTADO_CLIENTE[cliente.estado]} className="mt-1">
-          {humanizar(cliente.estado)}
-        </Etiqueta>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-texto-suave">Acceso</p>
+          <p className="mt-0.5 text-xs text-texto-suave">Bloquear impide que el cliente entre a la app.</p>
+        </div>
+        <Etiqueta color={COLOR_ESTADO_CLIENTE[cliente.estado]}>{texto(cliente.estado)}</Etiqueta>
       </div>
 
-      <Selector
-        etiqueta="Cambiar a"
-        name="nuevo-estado"
-        opciones={ESTADOS_CLIENTE.map((e) => ({ valor: e, texto: humanizar(e) }))}
-        value={nuevoEstado}
-        onChange={(e) => setNuevoEstado(e.target.value)}
-        className="w-40"
-      />
-
-      <Boton
-        variante={nuevoEstado === 'bloqueado' ? 'peligro' : 'primario'}
-        tamano="md"
-        disabled={!hayCambio}
-        onClick={() => setConfirmando(true)}
-      >
-        Guardar estado
-      </Boton>
+      <div className="flex items-end gap-2">
+        <Selector
+          etiqueta="Cambiar a"
+          name="nuevo-acceso"
+          opciones={ESTADOS_CLIENTE.map((e) => ({ valor: e, texto: texto(e) }))}
+          value={nuevoEstado}
+          onChange={(e) => setNuevoEstado(e.target.value)}
+          className="flex-1"
+        />
+        <Boton
+          variante={nuevoEstado === 'bloqueado' ? 'peligro' : 'primario'}
+          disabled={!hayCambio}
+          onClick={() => setConfirmando(true)}
+        >
+          Guardar
+        </Boton>
+      </div>
 
       <DialogoConfirmacion
         abierto={confirmando}
-        titulo="Cambiar estado del cliente"
-        mensaje={`¿Cambiar el estado de "${cliente.nombre}" de "${humanizar(cliente.estado)}" a "${humanizar(nuevoEstado)}"?`}
+        titulo="Cambiar acceso del cliente"
+        mensaje={`¿Cambiar el acceso de "${cliente.nombre}" de "${texto(cliente.estado)}" a "${texto(nuevoEstado)}"?`}
         textoConfirmar="Sí, cambiar"
         variante={nuevoEstado === 'bloqueado' ? 'peligro' : 'primario'}
         onConfirmar={async () => {
@@ -182,75 +179,6 @@ function ControlEstado({ cliente, onCambiado }) {
         onCerrar={() => setConfirmando(false)}
       />
     </div>
-  );
-}
-
-/** PUT /admin/clientes/:id — body: { nombre?, email?, whatsapp? }. */
-function ModalEditarCliente({ abierto, cliente, onCerrar, onGuardado }) {
-  const [campos, setCampos] = useState(() => ({
-    nombre: cliente.nombre || '',
-    whatsapp: cliente.whatsapp || '',
-    email: cliente.email || '',
-  }));
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState(null);
-
-  function actualizar(campo) {
-    return (e) => setCampos((c) => ({ ...c, [campo]: e.target.value }));
-  }
-
-  function cerrar() {
-    setError(null);
-    onCerrar();
-  }
-
-  async function enviar(e) {
-    e.preventDefault();
-    setCargando(true);
-    setError(null);
-    try {
-      await clientesApi.actualizarDatos(cliente.id, {
-        nombre: campos.nombre.trim(),
-        whatsapp: campos.whatsapp.trim(),
-        email: campos.email.trim() || null,
-      });
-      onGuardado();
-    } catch (err) {
-      setError(err?.message || 'No se pudieron guardar los cambios.');
-    } finally {
-      setCargando(false);
-    }
-  }
-
-  return (
-    <Modal
-      abierto={abierto}
-      titulo="Editar cliente"
-      onCerrar={cargando ? undefined : cerrar}
-      pie={
-        <>
-          <Boton variante="secundario" onClick={cerrar} disabled={cargando}>
-            Cancelar
-          </Boton>
-          <Boton type="submit" form="form-editar-cliente" cargando={cargando}>
-            Guardar cambios
-          </Boton>
-        </>
-      }
-    >
-      <form id="form-editar-cliente" onSubmit={enviar} className="space-y-4">
-        <Campo etiqueta="Nombre" name="nombre" value={campos.nombre} onChange={actualizar('nombre')} required autoFocus />
-        <Campo
-          etiqueta="WhatsApp"
-          name="whatsapp"
-          value={campos.whatsapp}
-          onChange={actualizar('whatsapp')}
-          required
-        />
-        <Campo etiqueta="Email (opcional)" name="email" type="email" value={campos.email} onChange={actualizar('email')} />
-        {error && <p className="text-xs text-red-400">{error}</p>}
-      </form>
-    </Modal>
   );
 }
 

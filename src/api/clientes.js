@@ -10,10 +10,10 @@ export const listar = (estado) => api.get('/admin/clientes', { estado });
 /** GET /admin/clientes/:id */
 export const detalle = (id) => api.get(`/admin/clientes/${id}`);
 
-/** POST /admin/clientes — body: { nombre, whatsapp, email? }. nombre y whatsapp obligatorios; whatsapp único (+52...). */
+/** POST /admin/clientes — body: { nombre, whatsapp, email? }. nombre y whatsapp obligatorios; whatsapp único; el backend lo guarda normalizado (+51...). */
 export const crear = (datos) => api.post('/admin/clientes', datos);
 
-/** PUT /admin/clientes/:id — body: { nombre?, email?, whatsapp? } */
+/** PUT /admin/clientes/:id — body: { nombre?, email?, whatsapp? }. email null = borrarlo. */
 export const actualizarDatos = (id, datos) => api.put(`/admin/clientes/${id}`, datos);
 
 /** PUT /admin/clientes/:id/estado — body: { estado } */
@@ -27,3 +27,17 @@ export const pagos = (id) => api.get(`/admin/clientes/${id}/pagos`);
 
 /** GET /admin/clientes/:id/recordatorios — avisos de renovación futuros no enviados */
 export const recordatorios = (id) => api.get(`/admin/clientes/${id}/recordatorios`);
+
+// --- Módulo Clientes (CRM) ---
+
+/** GET /admin/clientes/tarjetas — { total, vigentes, activos, proximos_a_vencer, vencen_hoy, vencidos, inactivos, nuevos_mes } */
+export const tarjetas = () => api.get('/admin/clientes/tarjetas');
+
+/**
+ * GET /admin/clientes/listado — { total, pagina, por_pagina, filas }.
+ * filtros: { q, estado_comercial (uno, varios con coma, o "vigentes"), acceso, orden: urgencia|nombre|recientes, pagina, por_pagina }
+ */
+export const listado = (filtros) => api.get('/admin/clientes/listado', filtros);
+
+/** GET /admin/clientes/:id/resumen — resumen rápido, próxima acción y etiquetas de la ficha */
+export const resumen = (id) => api.get(`/admin/clientes/${id}/resumen`);

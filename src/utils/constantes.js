@@ -94,6 +94,53 @@ export const COLOR_ESTADO_CLIENTE = {
 };
 
 /**
+ * Módulo Clientes (CRM). `clientes.estado` se muestra como "Acceso" para no
+ * confundirlo con el estado COMERCIAL (que calcula el backend desde los pedidos).
+ */
+export const TEXTO_ACCESO_CLIENTE = {
+  activo: 'Habilitado',
+  inactivo: 'Deshabilitado',
+  bloqueado: 'Bloqueado',
+};
+
+/** Espejo de ESTADOS_COMERCIALES y sus umbrales en backend/src/utils/constants.js. */
+export const ESTADOS_COMERCIALES = {
+  activo: {
+    texto: 'Al día',
+    punto: 'bg-emerald-400',
+    clase: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
+    ayuda: 'Tiene al menos un servicio vigente y ninguno vence en los próximos 7 días.',
+  },
+  proximo_a_vencer: {
+    texto: 'Por vencer',
+    punto: 'bg-amber-400',
+    clase: 'border-amber-500/40 bg-amber-500/15 text-amber-300',
+    ayuda: 'Algún servicio vence en 7 días o menos. Buen momento para ofrecer la renovación.',
+  },
+  vencido: {
+    texto: 'Vencido',
+    punto: 'bg-rose-500',
+    clase: 'border-rose-500/40 bg-rose-500/15 text-rose-300',
+    ayuda: 'Ya no tiene servicios vigentes; el último venció hace 30 días o menos. Todavía es fácil recuperarlo.',
+  },
+  inactivo: {
+    texto: 'Inactivo',
+    punto: 'bg-slate-500',
+    clase: 'border-white/10 bg-white/[0.04] text-texto-suave',
+    ayuda: 'Nunca activó un servicio, o el último venció hace más de 30 días.',
+  },
+};
+
+/** Próxima acción recomendada (la calcula el backend: services/clientesService.js). */
+export const ACCIONES_CLIENTE = {
+  renovar: { icono: 'actualizar', clase: 'border-marca-500/40 bg-marca-500/15 text-marca-400' },
+  contactar: { icono: 'whatsapp', clase: 'border-amber-500/40 bg-amber-500/15 text-amber-300' },
+  esperar: { icono: 'reloj', clase: 'border-sky-500/40 bg-sky-500/15 text-sky-300' },
+  recuperar: { icono: 'fuego', clase: 'border-rose-500/40 bg-rose-500/15 text-rose-300' },
+  ninguna: { icono: 'check', clase: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' },
+};
+
+/**
  * ¿Qué transiciones de estado ofrece la UI para un pedido?
  * (El botón "Renovar" es aparte: crea un pedido nuevo, no es transición.)
  */
