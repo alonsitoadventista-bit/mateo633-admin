@@ -32,6 +32,9 @@ export const historialPorPedido = (pedidoId) => api.get(`/admin/pedidos/${pedido
 export const asignarManual = (pedidoId, inventario_id) =>
   api.put(`/admin/pedidos/${pedidoId}/inventario/asignar`, { inventario_id });
 
+/** PUT /admin/pedidos/:id/inventario/asignar-auto -- asigna el primer perfil disponible (pedido activo sin perfil). */
+export const asignarAutomatico = (pedidoId) => api.put(`/admin/pedidos/${pedidoId}/inventario/asignar-auto`);
+
 /**
  * PUT /admin/pedidos/:id/inventario/entrega-manual -- botón de EMERGENCIA:
  * crea un perfil de inventario nuevo (ad-hoc) y lo asigna de inmediato.

@@ -143,7 +143,7 @@ export function DetallePedido() {
           ) : (
             <EstadoVacio
               titulo="Sin perfil asignado"
-              descripcion="No había ningún perfil disponible del inventario para este servicio al momento de activar. Usa 'Asignar manualmente' arriba en cuanto haya inventario cargado."
+              descripcion="No había ningún perfil disponible del inventario para este servicio al momento de activar. Usa '⚡ Asignar automáticamente' (o 'Asignar manualmente') arriba en cuanto haya inventario cargado."
             />
           )}
         </Tarjeta>
@@ -200,6 +200,49 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
   const [modalEntregaManual, setModalEntregaManual] = useState(false);
   const [modalEntregar, setModalEntregar] = useState(false);
   const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar' | 'liberar'
+  const [asignandoAuto, setAsignandoAuto] = useState(false);
+  const [aviso, setAviso] = useState(null); // { tipo: 'info' | 'pin' | 'error', texto, cuentaId? }
+
+  // Flujo rápido: cuántos perfiles disponibles hay del servicio (endpoint de solo lectura ya existente).
+  const necesitaStock = pedido.estado === 'pagado' || (pedido.estado === 'activo' && !inventario);
+  const { data: stock } = useApi(
+    () => (necesitaStock ? inventarioApi.listar({ servicio_id: pedido.servicio_id, estado: 'disponible' }) : Promise.resolve(null)),
+    [necesitaStock, pedido.servicio_id]
+  );
+  const disponibles = Array.isArray(stock) ? stock.length : null;
+
+  // Tras activar/asignar: abre la entrega directo, salvo sin stock o con el PIN pendiente de ajuste.
+  function trasAsignar({ perfilAsignado, pinPendiente, cuentaId }) {
+    if (!perfilAsignado) {
+      setAviso({
+        tipo: 'info',
+        texto: `Servicio activado, pero no había perfiles disponibles de ${pedido.servicio_nombre}. Carga inventario y usa "⚡ Asignar automáticamente".`,
+      });
+    } else if (pinPendiente) {
+      setAviso({
+        tipo: 'pin',
+        texto: 'Perfil asignado, pero con el PIN pendiente de ajuste: ajústalo en la plataforma y pulsa "Marcar ajustado" en la cuenta antes de entregar.',
+        cuentaId,
+      });
+    } else {
+      setAviso(null);
+      setModalEntregar(true);
+    }
+  }
+
+  async function asignarAutomatico() {
+    setAsignandoAuto(true);
+    setAviso(null);
+    try {
+      const perfil = await inventarioApi.asignarAutomatico(pedido.id);
+      onCambiado();
+      trasAsignar({ perfilAsignado: true, pinPendiente: perfil?.pin_estado === 'pendiente_ajuste', cuentaId: perfil?.cuenta_servicio_id });
+    } catch (err) {
+      setAviso({ tipo: 'error', texto: err?.message || 'No se pudo asignar un perfil automáticamente.' });
+    } finally {
+      setAsignandoAuto(false);
+    }
+  }
 
   const mostrarPagar = pedido.estado === 'pendiente';
   const mostrarActivar = pedido.estado === 'pagado';
@@ -208,6 +251,8 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
   const mostrarLiberar = inventario?.estado === 'vencido';
   // Paso FINAL de entrega (migración 021): pedido activo con su perfil asignado.
   const mostrarEntregar = pedido.estado === 'activo' && inventario?.estado === 'asignado';
+  // Flujo rápido: pedido activo sin perfil -> asignación automática como acción principal.
+  const mostrarAsignarAuto = pedido.estado === 'activo' && !inventario;
   const mostrarCancelar = pedido.estado === 'pendiente' || pedido.estado === 'pagado' || pedido.estado === 'activo';
   const mostrarRenovar = pedido.estado === 'activo' || pedido.estado === 'vencido';
 
@@ -228,12 +273,19 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
       )}
       {mostrarActivar && (
         <Boton variante="primario" tamano="md" onClick={() => setConfirmando('activar')}>
-          Activar servicio
+          {disponibles === 0 ? 'Activar servicio' : '⚡ Activar y entregar'}
         </Boton>
       )}
       {mostrarEntregar && (
         <Boton variante="primario" tamano="md" onClick={() => setModalEntregar(true)}>
           📲 Entregar credenciales
+        </Boton>
+      )}
+      {mostrarAsignarAuto && (
+        <Boton variante="primario" tamano="md" onClick={asignarAutomatico} cargando={asignandoAuto} disabled={disponibles === 0}>
+          {disponibles === 0
+            ? `Sin perfiles disponibles de ${pedido.servicio_nombre}`
+            : `⚡ Asignar automáticamente${disponibles != null ? ` (${disponibles} disponible${disponibles === 1 ? '' : 's'})` : ''}`}
         </Boton>
       )}
       {mostrarAsignarManual && (
@@ -260,6 +312,25 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
         <Boton variante="peligro" tamano="md" onClick={() => setConfirmando('cancelar')}>
           Cancelar pedido
         </Boton>
+      )}
+
+      {aviso && (
+        <p
+          className={`basis-full text-sm ${
+            aviso.tipo === 'error' ? 'text-red-400' : aviso.tipo === 'pin' ? 'text-amber-400' : 'text-texto-suave'
+          }`}
+        >
+          {aviso.tipo === 'pin' ? '⚠ ' : ''}
+          {aviso.texto}
+          {aviso.tipo === 'pin' && (aviso.cuentaId || inventario?.cuenta_servicio_id) && (
+            <>
+              {' '}
+              <Link to={`/inventario/cuentas/${aviso.cuentaId || inventario.cuenta_servicio_id}`} className="text-marca-500 hover:underline">
+                Ir a la cuenta
+              </Link>
+            </>
+          )}
+        </p>
       )}
 
       <ModalMarcarPagado
@@ -301,12 +372,13 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
 
       <DialogoConfirmacion
         abierto={confirmando === 'activar'}
-        titulo="Activar servicio"
-        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará la fecha de vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios de renovación, y si hay un perfil disponible del inventario para "${pedido.servicio_nombre}" se le asignará automáticamente.`}
+        titulo={disponibles === 0 ? 'Activar servicio' : 'Activar y entregar'}
+        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará la fecha de vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios de renovación, y si hay un perfil disponible del inventario para "${pedido.servicio_nombre}" se le asignará automáticamente y se abrirá la entrega de credenciales.${disponibles === 0 ? ' Ahora mismo no hay perfiles disponibles de este servicio.' : ''}`}
         textoConfirmar="Sí, activar"
         onConfirmar={async () => {
-          await pedidosApi.activar(pedido.id);
+          const resultado = await pedidosApi.activar(pedido.id);
           onCambiado();
+          trasAsignar({ perfilAsignado: resultado?.perfil_asignado, pinPendiente: resultado?.perfil_pin_pendiente });
         }}
         onCerrar={() => setConfirmando(null)}
       />
