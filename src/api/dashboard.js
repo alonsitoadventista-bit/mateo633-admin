@@ -24,3 +24,27 @@ export const serviciosMasVendidos = (limite = 10) =>
 
 /** GET /admin/dashboard/ventas-por-vendedor */
 export const ventasPorVendedor = () => api.get('/admin/dashboard/ventas-por-vendedor');
+
+/* --- Dashboard nuevo (2026-09-24). Todo en hora de Lima; fechas de calendario como 'YYYY-MM-DD'. --- */
+
+/** GET /admin/dashboard/resumen — las 4 tarjetas: ventas_dia, servicios_activos, pedidos_pendientes, por_vencer. */
+export const resumen = () => api.get('/admin/dashboard/resumen');
+
+/** GET /admin/dashboard/ganancias — SOLO administrador. { periodos: { dia, semana, mes, anio }, cuentas_con_costo_sin_fecha }. */
+export const ganancias = () => api.get('/admin/dashboard/ganancias');
+
+/** GET /admin/dashboard/ventas-serie?rango=7d|30d|12m — { rango, unidad, puntos: [{ fecha, ventas, pedidos }] }. */
+export const ventasSerie = (rango = '30d') => api.get('/admin/dashboard/ventas-serie', { rango });
+
+/** GET /admin/dashboard/inventario — estado del inventario por servicio. */
+export const inventario = () => api.get('/admin/dashboard/inventario');
+
+/** GET /admin/dashboard/ultimos-pedidos?limite=7 */
+export const ultimosPedidos = (limite = 7) => api.get('/admin/dashboard/ultimos-pedidos', { limite });
+
+/** GET /admin/dashboard/alertas — [{ clave, nivel, titulo, detalle, cantidad, enlace }]. */
+export const alertas = () => api.get('/admin/dashboard/alertas');
+
+/** GET /admin/dashboard/servicios-mas-vendidos?limite=&dias= (dias opcional: sin él, todo el historial). */
+export const masVendidos = (limite = 6, dias = 30) =>
+  api.get('/admin/dashboard/servicios-mas-vendidos', dias ? { limite, dias } : { limite });

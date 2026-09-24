@@ -49,3 +49,6 @@ export const desactivarPlan = (planId) => api.del(`/admin/planes/${planId}`);
 
 /** PUT /admin/planes/:id/activar */
 export const activarPlan = (planId) => api.put(`/admin/planes/${planId}/activar`);
+
+/** GET /admin/planes — TODOS los planes de todos los servicios, con servicio_nombre (módulo Precios). */
+export const listarPlanes = () => api.get('/admin/planes');

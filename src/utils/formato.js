@@ -47,6 +47,25 @@ export function fechaHora(iso) {
   }).format(d);
 }
 
+/**
+ * Fecha de calendario 'YYYY-MM-DD' (así las devuelve el dashboard). Se arma
+ * como fecha LOCAL: new Date('2026-09-24') sería medianoche UTC y en Lima se
+ * mostraría como el día 23.
+ */
+export function fechaCalendario(texto, opciones = { day: '2-digit', month: 'short' }) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto || '');
+  if (!m) return '—';
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Intl.DateTimeFormat(LOCALE, opciones).format(d);
+}
+
+/** Variación porcentual con signo: 12.5 -> "+12.5%", -3 -> "-3%". null -> null (sin base de comparación). */
+export function variacionPct(valor) {
+  if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) return null;
+  const n = Number(valor);
+  return `${n > 0 ? '+' : ''}${new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 }).format(n)}%`;
+}
+
 /** Días entre hoy y una fecha (negativo = ya pasó). */
 export function diasHasta(iso) {
   if (!iso) return null;
@@ -66,4 +85,10 @@ export function humanizar(texto) {
   if (!texto) return '';
   const s = String(texto).replace(/_/g, ' ');
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Solo la primera letra en mayúscula ("jueves, 24 de setiembre" -> "Jueves, 24 de setiembre"). CSS `capitalize` pondría "De Setiembre". */
+export function capitalizar(texto) {
+  if (!texto) return '';
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }

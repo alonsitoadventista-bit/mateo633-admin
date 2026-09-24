@@ -17,6 +17,7 @@ import { PagosPorRevisarPage } from './pages/pagos-por-revisar/PagosPorRevisarPa
 import { InventarioPage } from './pages/inventario/InventarioPage.jsx';
 import { ProveedoresPage } from './pages/proveedores/ProveedoresPage.jsx';
 import { ServiciosPage } from './pages/servicios/ServiciosPage.jsx';
+import { PreciosPage } from './pages/precios/PreciosPage.jsx';
 import { UsuariosPage } from './pages/usuarios/UsuariosPage.jsx';
 import { AuditoriaPage } from './pages/auditoria/AuditoriaPage.jsx';
 import { ConfiguracionPage } from './pages/configuracion/ConfiguracionPage.jsx';
@@ -56,6 +57,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={SOLO_ADMIN}>
               <ServiciosPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="precios"
+          element={
+            <ProtectedRoute roles={SOLO_ADMIN}>
+              <PreciosPage />
             </ProtectedRoute>
           }
         />

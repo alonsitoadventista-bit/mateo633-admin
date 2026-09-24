@@ -19,8 +19,9 @@ export const NAVEGACION = [
   { ruta: '/pagos-por-revisar', etiqueta: 'Pagos por revisar', icono: 'pagos', roles: null, fase: 5 },
   { ruta: '/inventario', etiqueta: 'Inventario', icono: 'inventario', roles: null, fase: 10 },
   { ruta: '/proveedores', etiqueta: 'Proveedores', icono: 'proveedores', roles: ['administrador'], fase: 10 },
-  { ruta: '/servicios', etiqueta: 'Servicios y Planes', icono: 'servicios', roles: ['administrador'], fase: 6 },
-  { ruta: '/usuarios', etiqueta: 'Vendedores', icono: 'vendedores', roles: ['administrador'], fase: 7 },
+  { ruta: '/servicios', etiqueta: 'Servicios', icono: 'servicios', roles: ['administrador'], fase: 6 },
+  { ruta: '/precios', etiqueta: 'Precios', icono: 'precios', roles: ['administrador'], fase: 11 },
+  { ruta: '/usuarios', etiqueta: 'Usuarios', icono: 'vendedores', roles: ['administrador'], fase: 7 },
   { ruta: '/auditoria', etiqueta: 'Auditoría', icono: 'auditoria', roles: ['administrador'], fase: 8 },
   { ruta: '/configuracion', etiqueta: 'Configuración', icono: 'configuracion', roles: ['administrador'], fase: 9 },
 ];
