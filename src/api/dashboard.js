@@ -48,3 +48,10 @@ export const alertas = () => api.get('/admin/dashboard/alertas');
 /** GET /admin/dashboard/servicios-mas-vendidos?limite=&dias= (dias opcional: sin él, todo el historial). */
 export const masVendidos = (limite = 6, dias = 30) =>
   api.get('/admin/dashboard/servicios-mas-vendidos', dias ? { limite, dias } : { limite });
+
+/**
+ * GET /admin/dashboard/proximas-renovaciones?dias=15 — servicios activos que vencen pronto:
+ * [{ pedido_id, cliente_id, cliente_nombre, cliente_whatsapp, servicio_nombre, servicio_imagen_url,
+ *    fecha_vencimiento ('YYYY-MM-DD'), dias_restantes, estado ('vence_hoy'|'vence_pronto'|'vigente'), renovacion_en_curso }]
+ */
+export const proximasRenovaciones = (dias = 15) => api.get('/admin/dashboard/proximas-renovaciones', { dias });

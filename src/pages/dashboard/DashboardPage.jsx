@@ -6,14 +6,15 @@
  *   1. Tarjetas: ventas del día, servicios activos, pedidos pendientes, cuentas por vencer.
  *   2. Ganancias (SOLO administrador) + gráfico de ventas.
  *   3. Estado del inventario + últimos pedidos.
- *   4. Alertas operativas + servicios más vendidos.
+ *   4. Atención requerida + Próximas renovaciones (2026-09-24: reemplaza a
+ *      "Servicios más vendidos", que el usuario pidió quitar del Dashboard).
  *   5. Ventas por vendedor (SOLO administrador).
  * Cada sección carga su propio endpoint: si una falla o tarda, no bloquea
  * al resto. Todas las fechas las calcula el backend en hora de Lima.
  * Sin auto-refresco: botón "Actualizar" (bump de `recargar`).
  *
  * Reemplaza a FilaMetricas, PanelModulos, PanelPedidosRecientes,
- * PanelPagosPorRevisar y PanelServiciosVencidos (quedan en el repo sin uso
+ * PanelPagosPorRevisar, PanelServiciosVencidos y PanelMasVendidos (quedan en el repo sin uso
  * hasta que el usuario autorice borrarlos). La fase visual final viene después.
  */
 import { useEffect, useState } from 'react';
@@ -26,7 +27,7 @@ import { GraficoVentas } from './GraficoVentas.jsx';
 import { PanelInventario } from './PanelInventario.jsx';
 import { PanelUltimosPedidos } from './PanelUltimosPedidos.jsx';
 import { PanelAlertas } from './PanelAlertas.jsx';
-import { PanelMasVendidos } from './PanelMasVendidos.jsx';
+import { PanelRenovaciones } from './PanelRenovaciones.jsx';
 import { PanelVentasPorVendedor } from './PanelVentasPorVendedor.jsx';
 
 const FORMATO_FECHA = new Intl.DateTimeFormat('es-PE', {
@@ -93,7 +94,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <PanelAlertas recargar={recargar} />
-        <PanelMasVendidos recargar={recargar} />
+        <PanelRenovaciones recargar={recargar} />
       </div>
 
       {esAdmin && <PanelVentasPorVendedor recargar={recargar} />}

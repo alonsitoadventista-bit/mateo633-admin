@@ -37,9 +37,10 @@ export function IconoTile({ icono, tono = 'dorado', tamano = 'md' }) {
  * Panel del dashboard: superficie oscura con degradado sutil, borde fino y
  * encabezado con ícono + título + subtítulo opcional + acciones a la derecha.
  */
-export function PanelDash({ icono, tono, titulo, subtitulo, acciones, children, className = '' }) {
+export function PanelDash({ id, icono, tono, titulo, subtitulo, acciones, children, className = '' }) {
   return (
     <section
+      id={id}
       className={`relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#16171b] to-[#0e0f12] p-5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)] ${className}`}
     >
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
