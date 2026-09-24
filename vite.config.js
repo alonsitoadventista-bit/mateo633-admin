@@ -22,6 +22,8 @@ export default defineConfig({
       '/admin': DESTINO_BACKEND,
       '/uploads': DESTINO_BACKEND,
       '/health': DESTINO_BACKEND,
+      // Solo la ruta pública de soporte: '/configuracion' a secas es una página del panel.
+      '/configuracion/soporte': DESTINO_BACKEND,
     },
   },
 });

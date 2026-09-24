@@ -10,9 +10,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import * as dashboardApi from '../../api/dashboard';
-import { Tarjeta, EstadoCarga, EstadoError } from '../../components/ui';
+import { EstadoCarga, EstadoError } from '../../components/ui';
 import { capitalizar, fechaCalendario, moneda, numero } from '../../utils/formato';
-import { Segmentos } from './piezas.jsx';
+import { PanelDash, Segmentos } from './piezas.jsx';
+
+const TITULO = { '7d': 'Ventas últimos 7 días', '30d': 'Ventas últimos 30 días', '12m': 'Ventas por mes (12 meses)' };
 
 const RANGOS = [
   { valor: '7d', texto: '7 días' },
@@ -24,10 +26,10 @@ const MEDIDAS = [
   { valor: 'pedidos', texto: 'Pagos' },
 ];
 
-const ALTO = 220;
+const ALTO = 280;
 const MARGEN = { arriba: 12, derecha: 8, abajo: 26, izquierda: 56 };
 const ANCHO_MAX_COLUMNA = 24;
-const COLOR_COLUMNA = 'var(--color-marca-500)';
+const COLOR_COLUMNA = 'url(#degradado-columna)'; // dorado de marca, más claro arriba
 
 /** Paso "redondo" (1, 2, 5 × 10^n) para que los ticks del eje sean números limpios. */
 function pasoLimpio(maximo, divisiones = 4) {
@@ -53,14 +55,19 @@ export function GraficoVentas({ recargar }) {
   const totalPagos = puntos.reduce((s, p) => s + p.pedidos, 0);
 
   return (
-    <Tarjeta
-      titulo="Ventas por periodo"
+    <PanelDash
+      icono="grafico"
+      tono="azul"
+      titulo={TITULO[rango]}
+      subtitulo="Pagos cobrados, en hora de Lima"
       acciones={<Segmentos etiqueta="Rango del gráfico" opciones={RANGOS} valor={rango} onCambio={setRango} />}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-texto-suave">
-          Total: <span className="font-semibold text-texto">{moneda(totalVentas)}</span> ·{' '}
-          <span className="font-semibold text-texto">{numero(totalPagos)}</span> pago{totalPagos === 1 ? '' : 's'}
+          Total del periodo{' '}
+          <span className="text-lg font-bold tabular-nums text-texto">{moneda(totalVentas)}</span>
+          <span className="mx-2 text-white/20">|</span>
+          <span className="font-semibold tabular-nums text-texto">{numero(totalPagos)}</span> pago{totalPagos === 1 ? '' : 's'}
         </p>
         <Segmentos etiqueta="Medida del gráfico" opciones={MEDIDAS} valor={medida} onCambio={setMedida} />
       </div>
@@ -97,7 +104,7 @@ export function GraficoVentas({ recargar }) {
           </details>
         </>
       )}
-    </Tarjeta>
+    </PanelDash>
   );
 }
 
@@ -135,9 +142,18 @@ function Columnas({ puntos, unidad, medida }) {
   return (
     <div ref={contenedor} className="relative w-full" onMouseLeave={() => setActivo(null)}>
       <svg width={ancho} height={ALTO} role="img" aria-label={`Gráfico de ${medida === 'ventas' ? 'ventas' : 'pagos'} por periodo`}>
+        <defs>
+          <linearGradient id="degradado-columna" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-marca-400)" />
+            <stop offset="100%" stopColor="var(--color-marca-700)" />
+          </linearGradient>
+          <filter id="brillo-columna" x="-50%" y="-20%" width="200%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#d4af37" floodOpacity="0.35" />
+          </filter>
+        </defs>
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={MARGEN.izquierda} x2={ancho - MARGEN.derecha} y1={y(t)} y2={y(t)} stroke="var(--color-borde)" strokeWidth="1" />
+            <line x1={MARGEN.izquierda} x2={ancho - MARGEN.derecha} y1={y(t)} y2={y(t)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
             <text x={MARGEN.izquierda - 6} y={y(t)} dy="0.32em" textAnchor="end" fontSize="10" fill="var(--color-texto-suave)">
               {medida === 'ventas' ? `S/ ${numero(t)}` : numero(t)}
             </text>
@@ -158,7 +174,8 @@ function Columnas({ puntos, unidad, medida }) {
                 <path
                   d={`M${x},${base} V${tope_ + r} Q${x},${tope_} ${x + r},${tope_} H${x + anchoColumna - r} Q${x + anchoColumna},${tope_} ${x + anchoColumna},${tope_ + r} V${base} Z`}
                   fill={COLOR_COLUMNA}
-                  opacity={activo === null || activo === i ? 1 : 0.45}
+                  opacity={activo === null || activo === i ? 1 : 0.4}
+                  filter={activo === i ? "url(#brillo-columna)" : undefined}
                 />
               )}
               {/* Zona de hover: toda la banda, más grande que la columna. */}
@@ -197,7 +214,7 @@ function Columnas({ puntos, unidad, medida }) {
 
       {p && (
         <div
-          className="pointer-events-none absolute top-0 z-10 rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-xs shadow-lg"
+          className="pointer-events-none absolute top-0 z-10 rounded-xl border border-marca-500/30 bg-[#1b1c20]/95 px-3 py-2 text-xs shadow-xl shadow-black/60 backdrop-blur"
           style={{ left: Math.min(Math.max(xActivo - 70, 0), ancho - 150), width: 150 }}
         >
           <p className="mb-1 font-semibold text-texto">{etiquetaPunto(p.fecha, unidad, true)}</p>

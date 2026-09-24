@@ -18,7 +18,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/useAuth';
-import { Boton } from '../../components/ui';
+import { IconoNav } from '../../components/IconoNav.jsx';
 import { capitalizar } from '../../utils/formato';
 import { TarjetasResumen } from './TarjetasResumen.jsx';
 import { PanelGanancias } from './PanelGanancias.jsx';
@@ -56,35 +56,42 @@ export function DashboardPage() {
   const fechaActual = useFechaActual();
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-[1600px] space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-texto">Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-texto">Dashboard</h1>
           <p className="text-sm text-texto-suave">
-            Resumen general del negocio · Hola, <span className="text-marca-500">{admin?.nombre}</span>
+            Resumen general del negocio · Hola, <span className="font-medium text-marca-400">{admin?.nombre}</span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <p className="hidden text-xs text-texto-suave sm:block">{fechaActual}</p>
-          <Boton variante="secundario" tamano="sm" onClick={() => setRecargar((n) => n + 1)}>
+        <div className="flex items-center gap-2">
+          <span className="hidden items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-xs text-texto/80 md:flex">
+            <IconoNav nombre="calendario" className="h-4 w-4 text-marca-400" />
+            {fechaActual}
+          </span>
+          <button
+            onClick={() => setRecargar((n) => n + 1)}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-texto transition hover:border-marca-500/50 hover:text-marca-400"
+          >
+            <IconoNav nombre="actualizar" className="h-4 w-4" />
             Actualizar
-          </Boton>
+          </button>
         </div>
       </div>
 
       <TarjetasResumen recargar={recargar} />
 
-      <div className={`grid grid-cols-1 gap-4 ${esAdmin ? 'xl:grid-cols-2' : ''}`}>
+      <div className={`grid grid-cols-1 gap-5 ${esAdmin ? 'xl:grid-cols-2' : ''}`}>
         {esAdmin && <PanelGanancias recargar={recargar} />}
         <GraficoVentas recargar={recargar} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <PanelInventario recargar={recargar} />
         <PanelUltimosPedidos recargar={recargar} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <PanelAlertas recargar={recargar} />
         <PanelMasVendidos recargar={recargar} />
       </div>

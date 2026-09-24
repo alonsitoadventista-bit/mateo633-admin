@@ -13,3 +13,6 @@ export const listar = (categoria) => api.get('/admin/configuracion', { categoria
 
 /** PUT /admin/configuracion/:clave — body: { valor } */
 export const actualizar = (clave, valor) => api.put(`/admin/configuracion/${clave}`, { valor });
+
+/** GET /configuracion/soporte — PÚBLICA y de solo lectura: { whatsapp } (solo dígitos, o null). La usa la tarjeta "Soporte rápido". */
+export const soporte = () => api.get('/configuracion/soporte');

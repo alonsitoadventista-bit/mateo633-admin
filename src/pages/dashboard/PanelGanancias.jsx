@@ -12,9 +12,10 @@
 import { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import * as dashboardApi from '../../api/dashboard';
-import { Tarjeta, EstadoCarga, EstadoError } from '../../components/ui';
-import { capitalizar, fechaCalendario, moneda, numero } from '../../utils/formato';
-import { FilaDato, Indicador, Segmentos } from './piezas.jsx';
+import { EstadoCarga, EstadoError } from '../../components/ui';
+import { IconoNav } from '../../components/IconoNav.jsx';
+import { capitalizar, fechaCalendario, moneda, numero, variacionPct } from '../../utils/formato';
+import { PanelDash, Segmentos } from './piezas.jsx';
 
 const PERIODOS = [
   { valor: 'dia', texto: 'Diaria', corto: 'Hoy', titulo: 'Ganancia del día', anterior: 'vs. ayer' },
@@ -23,10 +24,43 @@ const PERIODOS = [
   { valor: 'anio', texto: 'Anual', corto: 'Este año', titulo: 'Ganancia del año', anterior: 'vs. año anterior' },
 ];
 
+/** Tinte de cada mini tarjeta de periodo (como la referencia: turquesa, violeta, dorado). */
+const TINTE_MINI = [
+  'border-teal-500/25 from-teal-500/15 text-teal-300',
+  'border-violet-500/25 from-violet-500/15 text-violet-300',
+  'border-marca-500/30 from-marca-500/15 text-marca-400',
+];
+
 function rango(p, clave) {
   if (clave === 'dia') return capitalizar(fechaCalendario(p.desde, { weekday: 'long', day: '2-digit', month: 'long' }));
   if (clave === 'anio') return fechaCalendario(p.desde, { year: 'numeric' });
   return `${fechaCalendario(p.desde)} – ${fechaCalendario(p.hasta)}`;
+}
+
+/** Recuadro de variación a la derecha del monto (↑ verde / ↓ rojo / sin base). */
+function Variacion({ valor, contexto, anterior }) {
+  const texto = variacionPct(valor);
+  if (texto === null) {
+    return (
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-center">
+        <p className="text-xs text-texto-suave">{contexto}</p>
+        <p className="text-sm font-semibold text-texto">{moneda(anterior)}</p>
+      </div>
+    );
+  }
+  const sube = Number(valor) >= 0;
+  return (
+    <div
+      className={`rounded-xl border px-4 py-2 text-center ${
+        sube ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-red-500/30 bg-red-500/10 text-red-400'
+      }`}
+    >
+      <p className="text-xl font-bold">
+        {sube ? '↑' : '↓'} {texto}
+      </p>
+      <p className="text-xs text-texto-suave">{contexto}</p>
+    </div>
+  );
 }
 
 export function PanelGanancias({ recargar }) {
@@ -37,70 +71,91 @@ export function PanelGanancias({ recargar }) {
   const p = data?.periodos?.[periodo];
 
   return (
-    <Tarjeta
-      titulo="Ganancias"
-      acciones={<Segmentos etiqueta="Periodo de ganancias" opciones={PERIODOS} valor={periodo} onCambio={setPeriodo} />}
-    >
+    <PanelDash icono="billetera" tono="violeta" titulo="Ganancias" subtitulo="Resumen de ingresos netos (descontando costos)">
       {error ? (
         <EstadoError error={error} onReintentar={refetch} />
       ) : cargando && !data ? (
         <EstadoCarga />
       ) : !p ? null : (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-sm text-texto-suave">
-                {def.titulo} · {rango(p, periodo)}
-              </p>
-              <p className={`text-3xl font-bold ${p.ganancia < 0 ? 'text-red-400' : 'text-green-400'}`}>{moneda(p.ganancia)}</p>
-              <Indicador valor={p.variacion_ganancia_pct} contexto={def.anterior} sinBase={`${def.anterior}: ${moneda(p.anterior.ganancia)}`} />
+          <Segmentos etiqueta="Periodo de ganancias" opciones={PERIODOS} valor={periodo} onCambio={setPeriodo} ancho />
+
+          <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm text-texto-suave">
+                  {def.titulo} · {rango(p, periodo)}
+                </p>
+                <p className={`mt-1 text-4xl font-bold tracking-tight tabular-nums ${p.ganancia < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  {moneda(p.ganancia)}
+                </p>
+              </div>
+              <Variacion valor={p.variacion_ganancia_pct} contexto={def.anterior} anterior={p.anterior.ganancia} />
             </div>
+
+            <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-white/[0.06] pt-3 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-xs text-texto-suave">Ventas totales</dt>
+                <dd className="font-semibold tabular-nums text-texto">{moneda(p.ventas)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-texto-suave">Costos (proveedor)</dt>
+                <dd className="font-semibold tabular-nums text-rose-300">− {moneda(p.costos)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-texto-suave">Ganancia neta</dt>
+                <dd className="font-semibold tabular-nums text-texto">{moneda(p.ganancia)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-texto-suave">Pedidos pagados</dt>
+                <dd className="font-semibold tabular-nums text-texto">{numero(p.pedidos)}</dd>
+              </div>
+            </dl>
           </div>
 
-          <div className="space-y-1.5 border-t border-borde pt-3">
-            <FilaDato etiqueta="Ventas totales" valor={moneda(p.ventas)} />
-            <FilaDato etiqueta="Costos (compras al proveedor)" valor={`− ${moneda(p.costos)}`} />
-            <FilaDato etiqueta="Ganancia neta" valor={moneda(p.ganancia)} />
-            <FilaDato etiqueta="Pedidos pagados" valor={numero(p.pedidos)} />
-          </div>
-
-          {/* Resumen de los otros periodos, para compararlos de un vistazo. */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {PERIODOS.filter((o) => o.valor !== periodo).map((o) => {
+          {/* Los otros 3 periodos, para compararlos de un vistazo (clic = abrir esa pestaña). */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {PERIODOS.filter((o) => o.valor !== periodo).map((o, i) => {
               const otro = data.periodos[o.valor];
               return (
                 <button
                   key={o.valor}
                   onClick={() => setPeriodo(o.valor)}
-                  className="rounded-xl border border-borde bg-fondo px-3 py-2 text-left transition hover:border-marca-500/40"
+                  className={`flex items-center gap-3 rounded-xl border bg-gradient-to-br to-transparent px-3 py-2.5 text-left transition hover:brightness-125 ${TINTE_MINI[i]}`}
                 >
-                  <p className="text-xs text-texto-suave">{o.corto}</p>
-                  <p className="text-sm font-semibold text-texto">{moneda(otro.ganancia)}</p>
-                  <p className="text-[11px] text-texto-suave">{numero(otro.pedidos)} pedidos</p>
+                  <IconoNav nombre="calendario" className="h-6 w-6 shrink-0" />
+                  <span className="min-w-0">
+                    <span className="block text-xs text-texto/80">{o.corto}</span>
+                    <span className="block text-sm font-bold tabular-nums text-texto">{moneda(otro.ganancia)}</span>
+                    <span className="block text-[11px] text-texto-suave">{numero(otro.pedidos)} pedidos</span>
+                  </span>
                 </button>
               );
             })}
           </div>
 
           {(p.cuentas_sin_costo > 0 || data.cuentas_con_costo_sin_fecha > 0) && (
-            <div className="space-y-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-              {p.cuentas_sin_costo > 0 && (
-                <p>
-                  ⚠ {numero(p.cuentas_sin_costo)} cuenta{p.cuentas_sin_costo === 1 ? '' : 's'} comprada
-                  {p.cuentas_sin_costo === 1 ? '' : 's'} en este periodo sin costo cargado: no se descuenta
-                  {p.cuentas_sin_costo === 1 ? '' : 'n'}.
-                </p>
-              )}
-              {data.cuentas_con_costo_sin_fecha > 0 && (
-                <p>
-                  ⚠ {numero(data.cuentas_con_costo_sin_fecha)} cuenta{data.cuentas_con_costo_sin_fecha === 1 ? '' : 's'} con costo
-                  pero sin fecha de inicio: no entra{data.cuentas_con_costo_sin_fecha === 1 ? '' : 'n'} en ningún periodo.
-                </p>
-              )}
+            <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              <IconoNav nombre="alerta" className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+              <div className="space-y-0.5">
+                {p.cuentas_sin_costo > 0 && (
+                  <p>
+                    {numero(p.cuentas_sin_costo)} cuenta{p.cuentas_sin_costo === 1 ? '' : 's'} comprada
+                    {p.cuentas_sin_costo === 1 ? '' : 's'} en este periodo sin costo cargado: no se descuenta
+                    {p.cuentas_sin_costo === 1 ? '' : 'n'}.
+                  </p>
+                )}
+                {data.cuentas_con_costo_sin_fecha > 0 && (
+                  <p>
+                    {numero(data.cuentas_con_costo_sin_fecha)} cuenta{data.cuentas_con_costo_sin_fecha === 1 ? '' : 's'} con
+                    costo pero sin fecha de inicio: no entra{data.cuentas_con_costo_sin_fecha === 1 ? '' : 'n'} en ningún periodo.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
       )}
-    </Tarjeta>
+    </PanelDash>
   );
 }
