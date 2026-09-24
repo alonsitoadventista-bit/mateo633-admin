@@ -23,7 +23,7 @@
  * inventario disponible, más la acción "Liberar cuenta" cuando quedó
  * "vencido" (requiere que el admin haya rotado la contraseña real).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import * as pedidosApi from '../../api/pedidos';
@@ -643,18 +643,31 @@ function ModalEntregaManual({ abierto, pedido, onCerrar, onEntregado }) {
 }
 
 /**
- * Paso FINAL de entrega de credenciales (migración 021). Recién aquí se arma
- * el mensaje para el cliente: datos de acceso + instrucciones + el bloque
- * "Indicaciones importantes del servicio" (plantilla editable del servicio).
- * Esas indicaciones NO aparecen en ninguna pantalla anterior. "Abrir WhatsApp"
- * o "Copiar" registran la entrega en el historial (pestaña Entregas).
+ * Paso FINAL de entrega de credenciales (migración 021), pensado para la
+ * rapidez: correo, contraseña y PIN visibles con un botón de copiar cada uno,
+ * "Copiar credenciales completas", y el mensaje completo para WhatsApp. Los
+ * datos se leen en vivo de Inventario (no se guardan aparte). Las
+ * "Indicaciones importantes del servicio" solo van en el mensaje completo.
+ * Registro en el historial (pestaña Entregas): "Abrir WhatsApp" registra cada
+ * vez; las copias registran UNA entrega (canal "copiado") por apertura.
  */
+const TEXTO_COPIADO = {
+  correo: 'Correo copiado',
+  contrasena: 'Contraseña copiada',
+  pin: 'PIN copiado',
+  credenciales: 'Credenciales copiadas',
+  mensaje: 'Mensaje copiado',
+};
+
 function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
   const [datos, setDatos] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
-  const [registrado, setRegistrado] = useState(null); // 'whatsapp' | 'copiado'
+  const [registrado, setRegistrado] = useState(null); // { canal, en }
   const [registrando, setRegistrando] = useState(false);
+  const [copiado, setCopiado] = useState(null); // clave de TEXTO_COPIADO
+  const copiaRegistrada = useRef(false);
+  const temporizador = useRef(null);
 
   useEffect(() => {
     if (!abierto) return;
@@ -662,25 +675,30 @@ function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
     setDatos(null);
     setError(null);
     setRegistrado(null);
+    setCopiado(null);
+    copiaRegistrada.current = false;
     setCargando(true);
     pedidosApi
       .mensajeEntrega(pedido.id)
       .then((r) => vigente && setDatos(r))
-      .catch((err) => vigente && setError(err?.message || 'No se pudo preparar el mensaje de entrega.'))
+      .catch((err) => vigente && setError(err?.message || 'No se pudo preparar la entrega.'))
       .finally(() => vigente && setCargando(false));
     return () => {
       vigente = false;
     };
   }, [abierto, pedido.id]);
 
+  useEffect(() => () => clearTimeout(temporizador.current), []);
+
   async function registrar(canal) {
     setRegistrando(true);
     setError(null);
     try {
-      await pedidosApi.registrarEntrega(pedido.id, canal);
-      setRegistrado(canal);
+      const entrega = await pedidosApi.registrarEntrega(pedido.id, canal);
+      setRegistrado({ canal, en: entrega?.creado_en || new Date().toISOString() });
       onEntregado();
     } catch (err) {
+      if (canal === 'copiado') copiaRegistrada.current = false;
       setError(err?.message || 'La entrega no se pudo registrar en el historial.');
     } finally {
       setRegistrando(false);
@@ -694,14 +712,40 @@ function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
     registrar('whatsapp');
   }
 
-  async function copiar() {
+  async function copiar(clave, texto) {
     try {
-      await navigator.clipboard.writeText(datos.texto);
-      registrar('copiado');
+      await navigator.clipboard.writeText(texto);
     } catch {
       setError('No se pudo copiar al portapapeles. Selecciona el texto y cópialo a mano.');
+      return;
+    }
+    setError(null);
+    setCopiado(clave);
+    clearTimeout(temporizador.current);
+    temporizador.current = setTimeout(() => setCopiado(null), 2500);
+    if (!copiaRegistrada.current) {
+      copiaRegistrada.current = true;
+      registrar('copiado');
     }
   }
+
+  const c = datos?.credenciales;
+  const esPerfil = c?.tipo_espacio === 'perfil';
+  const nombreEspacio = c?.tipo_espacio === 'miembro' ? 'Miembro' : 'Perfil';
+  const espacio = c
+    ? (c.tipo_espacio === 'cuenta_completa' ? 'Cuenta completa' : `${nombreEspacio} ${c.numero_perfil || '—'}`) +
+      (c.nombre_perfil ? ` · ${c.nombre_perfil}` : '')
+    : '';
+  const credencialesCompletas = c
+    ? [
+        `Usuario/correo: ${c.correo}`,
+        ...(c.contrasena ? [`Contraseña: ${c.contrasena}`] : []),
+        ...(c.tipo_espacio !== 'cuenta_completa'
+          ? [`${nombreEspacio}: ${c.numero_perfil || '—'}${c.nombre_perfil ? ` (${c.nombre_perfil})` : ''}`]
+          : []),
+        ...(c.pin ? [`PIN: ${c.pin}`] : []),
+      ].join('\n')
+    : '';
 
   return (
     <Modal
@@ -713,7 +757,7 @@ function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
           <Boton variante="secundario" onClick={onCerrar} disabled={registrando}>
             {registrado ? 'Cerrar' : 'Cancelar'}
           </Boton>
-          <Boton variante="secundario" onClick={copiar} disabled={!datos || registrando}>
+          <Boton variante="secundario" onClick={() => copiar('mensaje', datos.texto)} disabled={!datos}>
             Copiar mensaje
           </Boton>
           <Boton onClick={abrirWhatsApp} disabled={!datos || !datos.cliente_whatsapp} cargando={registrando}>
@@ -727,24 +771,77 @@ function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
       ) : error && !datos ? (
         <p className="text-sm text-red-400">{error}</p>
       ) : datos ? (
-        <div className="space-y-3">
-          <p className="text-sm text-texto-suave">
-            Para {datos.cliente_nombre}
-            {datos.cliente_whatsapp ? ` · ${formatoWhatsapp(datos.cliente_whatsapp)}` : ' · sin WhatsApp registrado'}
-            {datos.advertencia_incluida ? ' · incluye las indicaciones de uso del servicio' : ''}
-          </p>
-          <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg border border-borde bg-superficie-alta p-3 text-sm text-texto">
-            {datos.texto}
-          </pre>
+        <div className="space-y-4">
+          <div className="text-sm text-texto-suave">
+            <p>
+              Para <span className="font-medium text-texto">{datos.cliente_nombre}</span>
+              {datos.cliente_whatsapp ? ` · ${formatoWhatsapp(datos.cliente_whatsapp)}` : ' · sin WhatsApp registrado'}
+            </p>
+            <p>
+              {datos.servicio_nombre} · {espacio} ·{' '}
+              <Link to={`/inventario/cuentas/${c.cuenta_servicio_id}`} className="text-marca-500 hover:underline">
+                ver cuenta
+              </Link>
+              {c.version_credenciales ? ` · credenciales v${c.version_credenciales}` : ''}
+            </p>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-borde bg-superficie-alta p-3">
+            <FilaCredencial etiqueta="Correo/usuario" valor={c.correo} textoBoton="Copiar correo" onCopiar={() => copiar('correo', c.correo)} />
+            <FilaCredencial
+              etiqueta="Contraseña"
+              valor={c.contrasena || '—'}
+              textoBoton="Copiar contraseña"
+              onCopiar={c.contrasena ? () => copiar('contrasena', c.contrasena) : undefined}
+            />
+            {esPerfil && (
+              <FilaCredencial
+                etiqueta="PIN del perfil"
+                valor={c.pin || 'Sin PIN (perfil sin candado)'}
+                textoBoton="Copiar PIN"
+                onCopiar={c.pin ? () => copiar('pin', c.pin) : undefined}
+              />
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Boton onClick={() => copiar('credenciales', credencialesCompletas)}>📋 Copiar credenciales completas</Boton>
+            {copiado && <span className="text-sm font-medium text-green-400">✔ {TEXTO_COPIADO[copiado]}</span>}
+          </div>
+
+          <details className="rounded-lg border border-borde">
+            <summary className="cursor-pointer px-3 py-2 text-sm text-texto-suave">
+              Ver mensaje completo para el cliente{datos.advertencia_incluida ? ' (incluye las indicaciones de uso)' : ''}
+            </summary>
+            <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap border-t border-borde p-3 text-sm text-texto">{datos.texto}</pre>
+          </details>
+
           {registrado && (
             <p className="text-sm text-green-400">
-              ✔ Entrega registrada ({registrado === 'whatsapp' ? 'enviada por WhatsApp' : 'mensaje copiado'}).
+              ✔ Entrega registrada el {fechaHora(registrado.en)} ({registrado.canal === 'whatsapp' ? 'enviada por WhatsApp' : 'datos copiados'}).
+              Queda en la pestaña "Entregas".
             </p>
           )}
           {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
       ) : null}
     </Modal>
+  );
+}
+
+function FilaCredencial({ etiqueta, valor, textoBoton, onCopiar }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="min-w-0">
+        <p className="text-xs uppercase tracking-wide text-texto-suave">{etiqueta}</p>
+        <code className="block select-all break-all text-base text-texto">{valor}</code>
+      </div>
+      {onCopiar && (
+        <Boton variante="secundario" tamano="sm" onClick={onCopiar}>
+          {textoBoton}
+        </Boton>
+      )}
+    </div>
   );
 }
 
