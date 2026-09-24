@@ -19,11 +19,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../auth/useAuth';
 import * as inventarioApi from '../../api/inventario';
+import * as proveedoresApi from '../../api/proveedores';
 import {
   Tarjeta,
   Tabla,
   Boton,
   Campo,
+  Selector,
   Etiqueta,
   Modal,
   EstadoCarga,
@@ -71,6 +73,7 @@ export function DetalleCuenta() {
   const [accionError, setAccionError] = useState(null);
   const [ocupado, setOcupado] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
   const { tienePermiso } = useAuth();
   const esAdministrador = tienePermiso(['administrador']);
 
@@ -139,6 +142,11 @@ export function DetalleCuenta() {
             <Boton variante="secundario" tamano="sm" onClick={() => setVerSecretos((v) => !v)}>
               {verSecretos ? '🙈 Ocultar contraseña' : '👁 Ver contraseña'}
             </Boton>
+            {!eliminada && (
+              <Boton variante="secundario" tamano="sm" onClick={() => setModalEditar(true)}>
+                ✏️ Editar cuenta
+              </Boton>
+            )}
             {esAdministrador && !eliminada && (
               <Boton variante="peligro" tamano="sm" onClick={() => setModalEliminar(true)}>
                 Eliminar cuenta
@@ -190,6 +198,7 @@ export function DetalleCuenta() {
             etiqueta="Credenciales"
             valor={`v${cuenta.version_credenciales}${cuenta.credenciales_actualizadas_en ? ` · ${fecha(cuenta.credenciales_actualizadas_en)}` : ''}`}
           />
+          {cuenta.notas_internas && <Dato etiqueta="Notas" valor={cuenta.notas_internas} />}
           {verSecretos && <Dato etiqueta="Contraseña" valor={<code>{cuenta.contrasena || '—'}</code>} />}
         </dl>
 
@@ -315,6 +324,17 @@ export function DetalleCuenta() {
         }}
       />
       <ModalHistorialPerfil perfil={perfilHistorial} onCerrar={() => setPerfilHistorial(null)} />
+      <ModalEditarCuenta
+        abierto={modalEditar}
+        cuenta={cuenta}
+        asignados={asignados}
+        esAdministrador={esAdministrador}
+        onCerrar={() => setModalEditar(false)}
+        onGuardado={() => {
+          setModalEditar(false);
+          recargar();
+        }}
+      />
       <ModalEliminarCuenta
         abierto={modalEliminar}
         cuenta={cuenta}
@@ -466,6 +486,171 @@ function ModalEditarPerfil({ perfil, usaPines, onCerrar, onGuardado }) {
           {error && <p className="text-xs text-red-400">{error}</p>}
         </form>
       )}
+    </Modal>
+  );
+}
+
+/**
+ * PUT /admin/inventario/cuentas/:id — "Editar cuenta": correo, contraseña,
+ * proveedor, costo, vencimiento y notas. No toca perfiles ni clientes.
+ * Correo/contraseña: solo administrador; suben la versión de credenciales
+ * y, con clientes activos, hay que confirmar la advertencia antes de guardar.
+ * La contraseña no se precarga: vacío = conservar la actual.
+ */
+function ModalEditarCuenta({ abierto, cuenta, asignados, esAdministrador, onCerrar, onGuardado }) {
+  const [correo, setCorreo] = useState('');
+  const [contrasena, setContrasena] = useState('');
+  const [proveedorId, setProveedorId] = useState('');
+  const [costo, setCosto] = useState('');
+  const [fechaVence, setFechaVence] = useState('');
+  const [notas, setNotas] = useState('');
+  const [confirmado, setConfirmado] = useState(false);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState(null);
+  const [abiertoAntes, setAbiertoAntes] = useState(false);
+  const { data: proveedores } = useApi(() => (abierto ? proveedoresApi.listar() : Promise.resolve(null)), [abierto]);
+
+  // Reinicia el formulario con los datos actuales cada vez que se abre.
+  if (abierto && !abiertoAntes) {
+    setAbiertoAntes(true);
+    setCorreo(cuenta.identificador_cuenta || '');
+    setContrasena('');
+    setProveedorId(cuenta.proveedor_id ? String(cuenta.proveedor_id) : '');
+    setCosto(cuenta.costo != null ? String(cuenta.costo) : '');
+    setFechaVence(cuenta.fecha_vence ? String(cuenta.fecha_vence).slice(0, 10) : '');
+    setNotas(cuenta.notas_internas || '');
+    setConfirmado(false);
+    setError(null);
+  }
+  if (!abierto && abiertoAntes) setAbiertoAntes(false);
+
+  const correoCambia = correo.trim() !== (cuenta.identificador_cuenta || '');
+  const cambiaCredenciales = correoCambia || contrasena !== '';
+  const requiereConfirmacion = cambiaCredenciales && asignados > 0;
+
+  // Proveedores activos, más el actual aunque esté desactivado.
+  const opcionesProveedor = (Array.isArray(proveedores) ? proveedores : [])
+    .filter((p) => p.activo !== false || String(p.id) === String(cuenta.proveedor_id))
+    .map((p) => ({ valor: String(p.id), texto: p.nombre }));
+
+  async function enviar(e) {
+    e.preventDefault();
+    setCargando(true);
+    setError(null);
+    try {
+      const datos = {
+        proveedor_id: proveedorId === '' ? null : Number(proveedorId),
+        costo: costo === '' ? null : Number(costo),
+        fecha_vence: fechaVence || null,
+        notas_internas: notas,
+      };
+      // Solo se envían las credenciales que cambian (los vendedores editan el resto).
+      if (correoCambia) datos.identificador_cuenta = correo.trim();
+      if (contrasena !== '') datos.contrasena = contrasena;
+      await inventarioApi.actualizarCuenta(cuenta.id, datos);
+      onGuardado();
+    } catch (err) {
+      setError(err?.message || 'No se pudo guardar la cuenta.');
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <Modal
+      abierto={abierto}
+      titulo="Editar cuenta"
+      onCerrar={cargando ? undefined : onCerrar}
+      pie={
+        <>
+          <Boton variante="secundario" onClick={onCerrar} disabled={cargando}>
+            Cancelar
+          </Boton>
+          <Boton
+            type="submit"
+            form="form-editar-cuenta"
+            cargando={cargando}
+            disabled={!correo.trim() || (requiereConfirmacion && !confirmado)}
+          >
+            Guardar
+          </Boton>
+        </>
+      }
+    >
+      <form id="form-editar-cuenta" onSubmit={enviar} className="space-y-4">
+        <p className="text-xs text-texto-suave">
+          Solo se editan los datos de la cuenta. Los perfiles, los clientes asignados y el historial no cambian.
+        </p>
+        <Campo
+          etiqueta="Correo/usuario de la cuenta"
+          name="identificador_cuenta"
+          value={correo}
+          onChange={(e) => setCorreo(e.target.value)}
+          disabled={!esAdministrador}
+          required
+        />
+        <Campo
+          etiqueta="Nueva contraseña (vacío = conservar la actual)"
+          name="contrasena"
+          type="text"
+          autoComplete="off"
+          value={contrasena}
+          onChange={(e) => setContrasena(e.target.value)}
+          disabled={!esAdministrador}
+        />
+        {!esAdministrador && (
+          <p className="text-xs text-texto-suave">Solo un administrador puede cambiar el correo o la contraseña.</p>
+        )}
+        {requiereConfirmacion && (
+          <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-texto">
+            <p>
+              ⚠ Esta cuenta tiene {asignados} cliente(s) activo(s). Al cambiar el correo o la contraseña, dejarán de poder
+              entrar con los datos anteriores: habrá que reenviarles las credenciales ("📲 Entregar credenciales" en cada
+              pedido). La app mostrará los datos nuevos automáticamente.
+            </p>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)} />
+              Entiendo, cambiar las credenciales
+            </label>
+          </div>
+        )}
+        <Selector
+          etiqueta="Proveedor"
+          name="proveedor_id"
+          placeholder="Sin proveedor"
+          opciones={opcionesProveedor}
+          value={proveedorId}
+          onChange={(e) => setProveedorId(e.target.value)}
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Campo
+            etiqueta="Costo"
+            name="costo"
+            type="number"
+            min="0"
+            step="0.01"
+            value={costo}
+            onChange={(e) => setCosto(e.target.value)}
+          />
+          <Campo
+            etiqueta="Vence ante el proveedor"
+            name="fecha_vence"
+            type="date"
+            value={fechaVence}
+            onChange={(e) => setFechaVence(e.target.value)}
+          />
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-texto-suave">Notas internas</span>
+          <textarea
+            className="w-full rounded-lg border border-borde bg-superficie-alta px-3 py-2 text-sm text-texto outline-none transition placeholder:text-texto-suave/60 focus:border-marca-500 focus:ring-2 focus:ring-marca-500/30"
+            rows={3}
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+          />
+        </label>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+      </form>
     </Modal>
   );
 }
