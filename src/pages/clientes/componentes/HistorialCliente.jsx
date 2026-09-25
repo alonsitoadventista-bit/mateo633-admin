@@ -4,7 +4,7 @@
  * GET /admin/clientes/:id/historial → línea de tiempo en lenguaje simple:
  * compras, renovaciones, pagos, activaciones (con su vencimiento), perfiles,
  * entregas, vencimientos y cambios de datos (antes → después), con quién lo
- * hizo. Filtro rápido por tipo.
+ * hizo. Filtro rápido por tipo. F2: agrupado por mes y con chip de color por tipo.
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -13,7 +13,7 @@ import * as clientesApi from '../../../api/clientes';
 import { EstadoCarga, EstadoError, EstadoVacio } from '../../../components/ui';
 import { IconoNav } from '../../../components/IconoNav.jsx';
 import { TEXTO_ACCESO_CLIENTE } from '../../../utils/constantes';
-import { fecha, fechaHora, humanizar, moneda } from '../../../utils/formato';
+import { capitalizar, fecha, fechaHora, humanizar, moneda } from '../../../utils/formato';
 import { Segmentos } from '../../dashboard/piezas.jsx';
 
 const FILTROS = [
@@ -97,20 +97,26 @@ export function HistorialCliente({ clienteId }) {
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto [&_button]:whitespace-nowrap">
         <Segmentos opciones={FILTROS} valor={filtro} onCambio={setFiltro} etiqueta="Tipo de evento" />
       </div>
       {eventos.length === 0 ? (
         <EstadoVacio titulo="Sin eventos" descripcion="No hay movimientos de este tipo." />
       ) : (
-        <ol className="relative space-y-4 border-l border-white/10 pl-6">
-          {eventos.map((e, i) => (
+        agruparPorMes(eventos).map(([mes, grupo]) => (
+        <section key={mes}>
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-texto-suave">{mes}</h4>
+        <ol className="relative mb-2 space-y-4 border-l border-white/10 pl-6">
+          {grupo.map((e, i) => (
             <li key={e.id ?? `alta-${i}`} className="relative">
               <span className={`absolute -left-[37px] grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-[#121316] ${e.color}`}>
                 <IconoNav nombre={e.icono} className="h-3.5 w-3.5" />
               </span>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <p className="text-sm font-medium text-texto">
+                  <span className={`mr-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${CHIP[e.cat] || CHIP.todo}`}>
+                    {TEXTO_CHIP[e.cat] || 'Otro'}
+                  </span>
                   {e.titulo}
                   {e.servicio_nombre && <span className="text-texto-suave"> · {e.servicio_nombre}</span>}
                 </p>
@@ -136,7 +142,33 @@ export function HistorialCliente({ clienteId }) {
             </li>
           ))}
         </ol>
+        </section>
+        ))
       )}
     </div>
   );
+}
+
+const CHIP = {
+  compras: 'bg-marca-500/15 text-marca-400',
+  pagos: 'bg-emerald-500/15 text-emerald-300',
+  servicio: 'bg-sky-500/15 text-sky-300',
+  cambios: 'bg-white/[0.07] text-texto-suave',
+  todo: 'bg-white/[0.07] text-texto-suave',
+};
+
+const TEXTO_CHIP = { compras: 'Servicio', pagos: 'Pago', servicio: 'Perfil', cambios: 'Cliente' };
+
+/** [["Setiembre 2026", [eventos...]], ...] respetando el orden (más reciente primero). */
+function agruparPorMes(eventos) {
+  const grupos = new Map();
+  for (const e of eventos) {
+    const d = new Date(e.fecha);
+    const mes = Number.isNaN(d.getTime())
+      ? 'Sin fecha'
+      : capitalizar(new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'numeric' }).format(d));
+    if (!grupos.has(mes)) grupos.set(mes, []);
+    grupos.get(mes).push(e);
+  }
+  return [...grupos.entries()];
 }

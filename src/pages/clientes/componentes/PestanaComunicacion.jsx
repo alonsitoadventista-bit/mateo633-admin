@@ -79,8 +79,8 @@ export function MensajesPreparados({ mensajes, cargando, error, onReintentar, on
   );
 }
 
-export function PestanaComunicacion({ clienteId, mensajes, onMensaje }) {
-  const com = useApi(() => clientesApi.comunicaciones(clienteId), [clienteId]);
+/** `mensajes` y `comunicaciones` son resultados de useApi que ya carga la ficha (se comparten con la cabecera y los indicadores). */
+export function PestanaComunicacion({ clienteId, mensajes, comunicaciones: com, onMensaje }) {
   const rec = useApi(() => clientesApi.recordatorios(clienteId), [clienteId]);
 
   return (

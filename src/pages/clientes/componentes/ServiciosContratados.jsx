@@ -1,18 +1,19 @@
 /**
- * pages/clientes/componentes/ServiciosContratados.jsx  (Clientes CRM, F1)
+ * pages/clientes/componentes/ServiciosContratados.jsx  (Clientes CRM, F1 → F2 visual)
  * -----------------------------------------
  * GET /admin/clientes/:id/servicios → una tarjeta por servicio vigente o
  * pendiente: estado, inicio, vencimiento con barra de días, perfil asignado
  * (cuenta + perfil; nunca la contraseña) y enlace al pedido.
  * "Recordar renovación" abre el mensaje preparado cuando vence en ≤ 7 días;
  * "Renovar" crea la renovación con la lógica existente (DialogoRenovar).
+ * F2: franja superior con el color de la marca y cuenta regresiva destacada.
  */
 import { Link } from 'react-router-dom';
 import { EstadoCarga, EstadoError, EstadoVacio } from '../../../components/ui';
 import { fecha, fechaCalendario, moneda } from '../../../utils/formato';
 import { IconoNav } from '../../../components/IconoNav.jsx';
 import { IconoServicio } from '../../dashboard/piezas.jsx';
-import { textoDias } from './Semaforo.jsx';
+import { acentoServicio, urgencia } from '../utilidades';
 
 const FECHA_LARGA = { day: '2-digit', month: 'short', year: 'numeric' };
 
@@ -57,7 +58,8 @@ export function ServiciosContratados({ datos, cargando, error, onReintentar, men
         const est = estadoServicio(s);
         const activo = s.estado === 'activo';
         return (
-          <li key={s.pedido_id} className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
+          <li key={s.pedido_id} className="relative overflow-hidden rounded-xl border border-white/[0.07] bg-gradient-to-b from-white/[0.035] to-black/20 p-4 pt-5">
+            <span className="absolute inset-x-0 top-0 h-1" style={{ background: acentoServicio(s.servicio_nombre) }} aria-hidden="true" />
             <div className="flex items-start gap-3">
               <IconoServicio nombre={s.servicio_nombre} imagenUrl={s.servicio_imagen_url} tamano="md" />
               <div className="min-w-0 flex-1">
@@ -87,8 +89,13 @@ export function ServiciosContratados({ datos, cargando, error, onReintentar, men
                     <p className="text-texto">{fechaCalendario(s.fecha_vencimiento, FECHA_LARGA)}</p>
                   </div>
                 </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-2xl font-bold tracking-tight text-texto">{urgencia(s.dias_restantes).grande}</span>
+                  <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${urgencia(s.dias_restantes).clase}`}>
+                    {urgencia(s.dias_restantes).largo}
+                  </span>
+                </div>
                 <BarraDias dias={s.dias_restantes} duracion={s.duracion_dias} />
-                <p className="text-xs text-texto/85">{textoDias(s.dias_restantes)}</p>
                 <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-sm">
                   <p className="text-xs text-texto-suave">Perfil asignado</p>
                   {s.perfil_id ? (

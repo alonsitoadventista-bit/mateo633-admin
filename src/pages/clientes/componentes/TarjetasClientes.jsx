@@ -1,42 +1,53 @@
 /**
- * pages/clientes/componentes/TarjetasClientes.jsx  (Clientes CRM, F1)
+ * pages/clientes/componentes/TarjetasClientes.jsx  (Clientes CRM, F1 → F2 visual)
  * -----------------------------------------
- * GET /admin/clientes/tarjetas → las 4 tarjetas superiores de Clientes:
- * totales · activos (con servicio vigente) · próximos a renovar · vencidos.
- * Mismo estilo que las tarjetas del Dashboard. Cada tarjeta filtra la lista
- * al hacer clic (y otro clic quita el filtro).
+ * GET /admin/clientes/tarjetas → 4 indicadores tipo CRM:
+ * Total clientes · Clientes activos · Próximos a vencer · Clientes vencidos.
+ * Cada uno con su color, el % que representa y una barra de proporción.
+ * Clic = filtra la lista (otro clic quita el filtro).
  */
 import { EstadoCarga, EstadoError } from '../../../components/ui';
 import { numero } from '../../../utils/formato';
-import { FilaDato, IconoTile } from '../../dashboard/piezas.jsx';
+import { IconoTile } from '../../dashboard/piezas.jsx';
 
-const TINTE = {
-  azul: 'border-blue-500/25 from-blue-600/25 via-blue-950/20 to-[#0e0f12] hover:border-blue-400/50',
-  verde: 'border-emerald-500/25 from-emerald-600/20 via-emerald-950/20 to-[#0e0f12] hover:border-emerald-400/50',
-  ambar: 'border-amber-500/25 from-amber-600/20 via-amber-950/20 to-[#0e0f12] hover:border-amber-400/50',
-  rojo: 'border-rose-500/25 from-rose-600/20 via-rose-950/20 to-[#0e0f12] hover:border-rose-400/50',
+const TONOS = {
+  azul: { borde: 'border-blue-500/20 hover:border-blue-400/50', fondo: 'from-blue-600/20', barra: 'bg-blue-400', texto: 'text-blue-300' },
+  verde: { borde: 'border-emerald-500/20 hover:border-emerald-400/50', fondo: 'from-emerald-600/15', barra: 'bg-emerald-400', texto: 'text-emerald-300' },
+  ambar: { borde: 'border-amber-500/20 hover:border-amber-400/50', fondo: 'from-amber-600/15', barra: 'bg-amber-400', texto: 'text-amber-300' },
+  rojo: { borde: 'border-rose-500/20 hover:border-rose-400/50', fondo: 'from-rose-600/15', barra: 'bg-rose-500', texto: 'text-rose-300' },
 };
 
-function Tarjeta({ titulo, ayuda, icono, tono, valor, activa, onClick, children }) {
+function pct(parte, total) {
+  return total > 0 ? Math.round((parte / total) * 100) : 0;
+}
+
+function Indicador({ titulo, icono, tono, valor, porcentaje, detalle, destacado, ayuda, activa, onClick }) {
+  const t = TONOS[tono];
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={activa}
       title={ayuda}
-      className={`flex flex-col overflow-hidden rounded-2xl border bg-gradient-to-br p-5 text-left shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)] transition ${TINTE[tono]} ${
+      className={`group flex flex-col rounded-2xl border bg-gradient-to-br ${t.fondo} via-[#111215] to-[#0c0d10] p-4 text-left shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] transition ${t.borde} ${
         activa ? 'ring-2 ring-marca-500/70' : ''
       }`}
     >
-      <div className="flex items-start gap-4">
-        <IconoTile icono={icono} tono={tono} tamano="lg" />
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-texto/80">{titulo}</p>
-          <p className="mt-0.5 text-3xl font-bold tracking-tight text-texto tabular-nums">{numero(valor)}</p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-texto-suave">{titulo}</p>
+        <IconoTile icono={icono} tono={tono} />
       </div>
-      <div className="mt-4 w-full space-y-2">{children}</div>
-      <span className="mt-3 text-xs font-medium text-marca-400">{activa ? 'Quitar filtro ×' : 'Ver en la lista →'}</span>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className="text-3xl font-bold tracking-tight tabular-nums text-texto">{numero(valor)}</span>
+        {porcentaje !== null && <span className={`text-sm font-semibold ${t.texto}`}>{porcentaje}%</span>}
+      </div>
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
+        <div className={`h-full rounded-full ${t.barra}`} style={{ width: `${porcentaje ?? 100}%` }} />
+      </div>
+      <p className="mt-2 text-xs text-texto-suave">
+        {destacado && <span className={`font-semibold ${t.texto}`}>{destacado} </span>}
+        {detalle}
+      </p>
     </button>
   );
 }
@@ -50,57 +61,55 @@ export function TarjetasClientes({ datos, cargando, error, onReintentar, filtro,
   const alternar = (valor) => onFiltrar(filtro === valor ? '' : valor);
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Tarjeta
-        titulo="Clientes totales"
-        ayuda="Todos los clientes registrados."
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <Indicador
+        titulo="Total clientes"
         icono="clientes"
         tono="azul"
         valor={datos.total}
+        porcentaje={null}
+        destacado={`+${numero(datos.nuevos_mes)}`}
+        detalle={`este mes · ${numero(datos.inactivos)} inactivos`}
+        ayuda="Todos los clientes registrados. Clic para ver todos."
         activa={false}
         onClick={() => onFiltrar('')}
-      >
-        <FilaDato etiqueta="Nuevos este mes" valor={numero(datos.nuevos_mes)} punto="bg-blue-400" />
-        <FilaDato etiqueta="Inactivos" valor={numero(datos.inactivos)} punto="bg-slate-500" />
-      </Tarjeta>
-
-      <Tarjeta
+      />
+      <Indicador
         titulo="Clientes activos"
-        ayuda="Clientes con al menos un servicio vigente."
         icono="usuarios"
         tono="verde"
         valor={datos.vigentes}
+        porcentaje={pct(datos.vigentes, datos.total)}
+        destacado={numero(datos.activos)}
+        detalle={`al día · ${numero(datos.proximos_a_vencer)} por vencer`}
+        ayuda="Clientes con al menos un servicio vigente."
         activa={filtro === 'vigentes'}
         onClick={() => alternar('vigentes')}
-      >
-        <FilaDato etiqueta="Al día" valor={numero(datos.activos)} punto="bg-emerald-400" />
-        <FilaDato etiqueta="Por vencer" valor={numero(datos.proximos_a_vencer)} punto="bg-amber-400" />
-      </Tarjeta>
-
-      <Tarjeta
-        titulo="Próximos a renovar"
-        ayuda="Algún servicio vence en 7 días o menos: ofréceles la renovación."
+      />
+      <Indicador
+        titulo="Próximos a vencer"
         icono="reloj"
         tono="ambar"
         valor={datos.proximos_a_vencer}
+        porcentaje={pct(datos.proximos_a_vencer, datos.vigentes)}
+        destacado={datos.vencen_hoy > 0 ? `${numero(datos.vencen_hoy)} vencen hoy` : null}
+        detalle={datos.vencen_hoy > 0 ? '· de los activos' : 'de los activos, en 7 días o menos'}
+        ayuda="Algún servicio vence en 7 días o menos: ofréceles la renovación."
         activa={filtro === 'proximo_a_vencer'}
         onClick={() => alternar('proximo_a_vencer')}
-      >
-        <FilaDato etiqueta="Vencen hoy" valor={numero(datos.vencen_hoy)} punto="bg-rose-500" />
-        <FilaDato etiqueta="En 1 a 7 días" valor={numero(datos.proximos_a_vencer - datos.vencen_hoy)} punto="bg-amber-400" />
-      </Tarjeta>
-
-      <Tarjeta
+      />
+      <Indicador
         titulo="Clientes vencidos"
-        ayuda="Sin servicios vigentes; el último venció hace 30 días o menos."
         icono="alerta"
         tono="rojo"
         valor={datos.vencidos}
+        porcentaje={pct(datos.vencidos, datos.total)}
+        destacado={null}
+        detalle="para recuperar (vencieron hace 30 días o menos)"
+        ayuda="Sin servicios vigentes; el último venció hace 30 días o menos."
         activa={filtro === 'vencido'}
         onClick={() => alternar('vencido')}
-      >
-        <FilaDato etiqueta="Para recuperar (últimos 30 días)" valor={numero(datos.vencidos)} punto="bg-rose-500" />
-      </Tarjeta>
+      />
     </div>
   );
 }

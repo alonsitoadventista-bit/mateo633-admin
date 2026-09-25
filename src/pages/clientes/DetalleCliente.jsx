@@ -1,42 +1,32 @@
 /**
- * pages/clientes/DetalleCliente.jsx  (Clientes CRM, F1 — 2026-09-24)
+ * pages/clientes/DetalleCliente.jsx  (Clientes CRM — F1 lógica, F2 visual)
  * -----------------------------------------
- * Ficha del cliente, de arriba abajo:
- * 1. Resumen rápido + etiquetas (GET /admin/clientes/:id/resumen), próxima
- *    acción recomendada con su mensaje preparado, y Acceso (clientes.estado).
- * 2. Servicios contratados (GET /admin/clientes/:id/servicios): vigentes y
- *    pendientes, con inicio, vencimiento y perfil asignado.
- * 3. Pestañas: Historial (línea de tiempo) · Compras y renovaciones · Pagos ·
- *    Comunicación (mensajes preparados, historial y avisos automáticos).
- * Los mensajes preparados (GET /admin/clientes/:id/mensajes) se abren en
- * WhatsApp para enviarlos a mano; la API de WhatsApp usará los mismos textos.
+ * Ficha CRM del cliente, de arriba abajo:
+ * 1. Cabecera: avatar, nombre, estado comercial, etiquetas y botones
+ *    Contactar por WhatsApp (mensaje preparado) · Renovar · Editar · ⋯ (Acceso).
+ * 2. Banner "Próxima acción recomendada".
+ * 3. Indicadores: próximo vencimiento destacado, servicios activos,
+ *    total histórico pagado y última comunicación.
+ * 4. Servicios contratados en tarjetas (GET /admin/clientes/:id/servicios).
+ * 5. Pestañas: Historial · Compras y renovaciones · Pagos · Comunicación.
+ * Datos: /resumen, /servicios, /mensajes y /comunicaciones (una sola carga,
+ * compartida entre las secciones). Sin lógica nueva: Renovar usa
+ * POST /admin/pedidos/:id/renovar y Acceso PUT /admin/clientes/:id/estado.
  */
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import * as clientesApi from '../../api/clientes';
-import {
-  Tabla,
-  Boton,
-  Selector,
-  Etiqueta,
-  DialogoConfirmacion,
-  EstadoCarga,
-  EstadoError,
-  EstadoVacio,
-} from '../../components/ui';
-import {
-  ESTADOS_CLIENTE,
-  COLOR_ESTADO_CLIENTE,
-  COLOR_ESTADO_PEDIDO,
-  TEXTO_ACCESO_CLIENTE,
-} from '../../utils/constantes';
+import { Tabla, Etiqueta, EstadoCarga, EstadoError, EstadoVacio } from '../../components/ui';
+import { COLOR_ESTADO_PEDIDO } from '../../utils/constantes';
 import { fecha, fechaHora, humanizar, moneda } from '../../utils/formato';
 import { PanelDash, Segmentos } from '../dashboard/piezas.jsx';
-import { ResumenCliente } from './componentes/ResumenCliente.jsx';
+import { CabeceraFicha } from './componentes/CabeceraFicha.jsx';
+import { IndicadoresFicha } from './componentes/IndicadoresFicha.jsx';
 import { TarjetaProximaAccion } from './componentes/ProximaAccion.jsx';
 import { ModalEditarCliente } from './componentes/ModalEditarCliente.jsx';
 import { ModalMensajeWhatsApp } from './componentes/ModalMensajeWhatsApp.jsx';
+import { ModalAcceso } from './componentes/ModalAcceso.jsx';
 import { ServiciosContratados } from './componentes/ServiciosContratados.jsx';
 import { HistorialCliente } from './componentes/HistorialCliente.jsx';
 import { PestanaComunicacion } from './componentes/PestanaComunicacion.jsx';
@@ -54,8 +44,10 @@ export function DetalleCliente() {
   const { data: r, cargando, error, refetch } = useApi(() => clientesApi.resumen(id), [id]);
   const servicios = useApi(() => clientesApi.servicios(id), [id]);
   const mensajes = useApi(() => clientesApi.mensajes(id), [id]);
+  const comunicaciones = useApi(() => clientesApi.comunicaciones(id), [id]);
 
   const [modalEditar, setModalEditar] = useState(false);
+  const [modalAcceso, setModalAcceso] = useState(false);
   const [mensajeAbierto, setMensajeAbierto] = useState(null);
   const [renovando, setRenovando] = useState(null);
   const [pestana, setPestana] = useState('historial');
@@ -81,38 +73,26 @@ export function DetalleCliente() {
   if (!r) return null;
 
   const mensajeRecordar = (mensajes.data || []).find((m) => m.tipo === 'recordar_renovacion');
+  const renovar = (o) => setRenovando({ ...o, cliente_nombre: r.nombre });
 
   return (
     <div className="space-y-4">
       <BotonVolver />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <ResumenCliente
-            r={r}
-            onEditar={() => setModalEditar(true)}
-            onRenovar={(o) => setRenovando({ ...o, cliente_nombre: r.nombre })}
-          />
-        </div>
-        <div className="space-y-4">
-          <TarjetaProximaAccion
-            accion={r.proxima_accion}
-            whatsapp={r.whatsapp}
-            mensajes={mensajes.data}
-            onMensaje={setMensajeAbierto}
-          />
-          <section className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#16171b] to-[#0e0f12] p-5">
-            <ControlAcceso cliente={{ id: r.id, nombre: r.nombre, estado: r.acceso }} onCambiado={refetch} />
-          </section>
-        </div>
-      </div>
+      <CabeceraFicha
+        r={r}
+        mensajes={mensajes.data}
+        onMensaje={setMensajeAbierto}
+        onRenovar={renovar}
+        onEditar={() => setModalEditar(true)}
+        onAcceso={() => setModalAcceso(true)}
+      />
 
-      <PanelDash
-        icono="servicios"
-        tono="verde"
-        titulo="Servicios contratados"
-        subtitulo="Vigentes y pendientes de pago o activación"
-      >
+      <TarjetaProximaAccion accion={r.proxima_accion} whatsapp={r.whatsapp} mensajes={mensajes.data} onMensaje={setMensajeAbierto} />
+
+      <IndicadoresFicha r={r} servicios={servicios.data} comunicaciones={comunicaciones.data} />
+
+      <PanelDash icono="servicios" tono="verde" titulo="Servicios contratados" subtitulo="Vigentes y pendientes de pago o activación">
         <ServiciosContratados
           datos={servicios.data}
           cargando={servicios.cargando}
@@ -120,19 +100,21 @@ export function DetalleCliente() {
           onReintentar={servicios.refetch}
           mensajeRecordar={mensajeRecordar}
           onMensaje={setMensajeAbierto}
-          onRenovar={(o) => setRenovando({ ...o, cliente_nombre: r.nombre })}
+          onRenovar={renovar}
         />
       </PanelDash>
 
       <section className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#16171b] to-[#0e0f12] p-5">
-        <div className="mb-4 overflow-x-auto">
+        <div className="mb-4 overflow-x-auto [&_button]:whitespace-nowrap">
           <Segmentos opciones={PESTANAS} valor={pestana} onCambio={setPestana} etiqueta="Secciones de la ficha" />
         </div>
 
         {pestana === 'historial' && <HistorialCliente clienteId={id} />}
         {pestana === 'pedidos' && <PestanaPedidos clienteId={id} />}
         {pestana === 'pagos' && <PestanaPagos clienteId={id} />}
-        {pestana === 'comunicacion' && <PestanaComunicacion clienteId={id} mensajes={mensajes} onMensaje={setMensajeAbierto} />}
+        {pestana === 'comunicacion' && (
+          <PestanaComunicacion clienteId={id} mensajes={mensajes} comunicaciones={comunicaciones} onMensaje={setMensajeAbierto} />
+        )}
       </section>
 
       <ModalEditarCliente
@@ -145,6 +127,8 @@ export function DetalleCliente() {
           mensajes.refetch();
         }}
       />
+
+      <ModalAcceso abierto={modalAcceso} cliente={r} onCerrar={() => setModalAcceso(false)} onCambiado={refetch} />
 
       <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} />
 
@@ -159,61 +143,6 @@ export function DetalleCliente() {
       </Link>
     );
   }
-}
-
-/**
- * PUT /admin/clientes/:id/estado — "Acceso" del cliente (clientes.estado:
- * activo/inactivo/bloqueado), separado de la edición de datos y del estado comercial.
- */
-function ControlAcceso({ cliente, onCambiado }) {
-  const [nuevoEstado, setNuevoEstado] = useState(cliente.estado);
-  const [confirmando, setConfirmando] = useState(false);
-
-  const hayCambio = nuevoEstado !== cliente.estado;
-  const texto = (e) => TEXTO_ACCESO_CLIENTE[e] || humanizar(e);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-texto-suave">Acceso</p>
-          <p className="mt-0.5 text-xs text-texto-suave">Bloquear impide que el cliente entre a la app.</p>
-        </div>
-        <Etiqueta color={COLOR_ESTADO_CLIENTE[cliente.estado]}>{texto(cliente.estado)}</Etiqueta>
-      </div>
-
-      <div className="flex items-end gap-2">
-        <Selector
-          etiqueta="Cambiar a"
-          name="nuevo-acceso"
-          opciones={ESTADOS_CLIENTE.map((e) => ({ valor: e, texto: texto(e) }))}
-          value={nuevoEstado}
-          onChange={(e) => setNuevoEstado(e.target.value)}
-          className="flex-1"
-        />
-        <Boton
-          variante={nuevoEstado === 'bloqueado' ? 'peligro' : 'primario'}
-          disabled={!hayCambio}
-          onClick={() => setConfirmando(true)}
-        >
-          Guardar
-        </Boton>
-      </div>
-
-      <DialogoConfirmacion
-        abierto={confirmando}
-        titulo="Cambiar acceso del cliente"
-        mensaje={`¿Cambiar el acceso de "${cliente.nombre}" de "${texto(cliente.estado)}" a "${texto(nuevoEstado)}"?`}
-        textoConfirmar="Sí, cambiar"
-        variante={nuevoEstado === 'bloqueado' ? 'peligro' : 'primario'}
-        onConfirmar={async () => {
-          await clientesApi.actualizarEstado(cliente.id, nuevoEstado);
-          onCambiado();
-        }}
-        onCerrar={() => setConfirmando(false)}
-      />
-    </div>
-  );
 }
 
 /**
