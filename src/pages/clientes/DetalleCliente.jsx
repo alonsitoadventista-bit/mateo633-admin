@@ -40,6 +40,7 @@ import { ModalMensajeWhatsApp } from './componentes/ModalMensajeWhatsApp.jsx';
 import { ServiciosContratados } from './componentes/ServiciosContratados.jsx';
 import { HistorialCliente } from './componentes/HistorialCliente.jsx';
 import { PestanaComunicacion } from './componentes/PestanaComunicacion.jsx';
+import { DialogoRenovar } from './componentes/DialogoRenovar.jsx';
 
 const PESTANAS = [
   { valor: 'historial', texto: 'Historial' },
@@ -56,6 +57,7 @@ export function DetalleCliente() {
 
   const [modalEditar, setModalEditar] = useState(false);
   const [mensajeAbierto, setMensajeAbierto] = useState(null);
+  const [renovando, setRenovando] = useState(null);
   const [pestana, setPestana] = useState('historial');
 
   if (error) {
@@ -86,7 +88,11 @@ export function DetalleCliente() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <ResumenCliente r={r} onEditar={() => setModalEditar(true)} />
+          <ResumenCliente
+            r={r}
+            onEditar={() => setModalEditar(true)}
+            onRenovar={(o) => setRenovando({ ...o, cliente_nombre: r.nombre })}
+          />
         </div>
         <div className="space-y-4">
           <TarjetaProximaAccion
@@ -114,6 +120,7 @@ export function DetalleCliente() {
           onReintentar={servicios.refetch}
           mensajeRecordar={mensajeRecordar}
           onMensaje={setMensajeAbierto}
+          onRenovar={(o) => setRenovando({ ...o, cliente_nombre: r.nombre })}
         />
       </PanelDash>
 
@@ -138,6 +145,8 @@ export function DetalleCliente() {
           mensajes.refetch();
         }}
       />
+
+      <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} />
 
       <ModalMensajeWhatsApp mensaje={mensajeAbierto} nombreCliente={r.nombre} onCerrar={() => setMensajeAbierto(null)} />
     </div>

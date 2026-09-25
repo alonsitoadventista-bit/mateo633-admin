@@ -7,7 +7,7 @@
  * - lista paginada con semáforo, servicios activos, vencimiento, último pago
  *   y próxima acción (GET /admin/clientes/listado; búsqueda y filtros en el
  *   servidor, ordenada por urgencia);
- * - acciones por fila: Ver, Editar, WhatsApp. "Renovar" llega en F3.
+ * - acciones por fila: Ver, Editar, WhatsApp y Renovar (reutiliza POST /admin/pedidos/:id/renovar).
  * Alta de cliente: POST /admin/clientes (el backend normaliza el WhatsApp).
  */
 import { useEffect, useState } from 'react';
@@ -25,6 +25,7 @@ import { FlujoRecomendado } from './componentes/FlujoRecomendado.jsx';
 import { EtiquetasCliente, Semaforo, textoDias } from './componentes/Semaforo.jsx';
 import { AccionPill } from './componentes/ProximaAccion.jsx';
 import { AyudaWhatsapp, ModalEditarCliente } from './componentes/ModalEditarCliente.jsx';
+import { DialogoRenovar, objetivoRenovacion } from './componentes/DialogoRenovar.jsx';
 
 const POR_PAGINA = 25;
 
@@ -56,6 +57,7 @@ export function ListaClientes() {
   const [pagina, setPagina] = useState(1);
   const [modalNuevo, setModalNuevo] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [renovando, setRenovando] = useState(null);
 
   // La búsqueda va al servidor 300 ms después de dejar de escribir.
   useEffect(() => {
@@ -212,7 +214,12 @@ export function ListaClientes() {
                   clave: 'acciones',
                   titulo: 'Acciones',
                   render: (f) => (
-                    <AccionesFila fila={f} onVer={() => navigate(`/clientes/${f.id}`)} onEditar={() => setEditando(f)} />
+                    <AccionesFila
+                      fila={f}
+                      onVer={() => navigate(`/clientes/${f.id}`)}
+                      onEditar={() => setEditando(f)}
+                      onRenovar={(o) => setRenovando({ ...o, cliente_nombre: f.nombre })}
+                    />
                   ),
                 },
               ]}
@@ -247,6 +254,8 @@ export function ListaClientes() {
         }}
       />
 
+      <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} />
+
       <ModalEditarCliente
         abierto={Boolean(editando)}
         cliente={editando}
@@ -278,8 +287,9 @@ function ServiciosActivos({ servicios = [] }) {
 }
 
 /** Botones de la fila. stopPropagation: el clic en el resto de la fila abre la ficha. */
-function AccionesFila({ fila, onVer, onEditar }) {
+function AccionesFila({ fila, onVer, onEditar, onRenovar }) {
   const enlace = enlaceWhatsApp(fila.whatsapp);
+  const renovar = objetivoRenovacion(fila);
   const base =
     'grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-texto-suave transition';
   const parar = (fn) => (e) => {
@@ -287,7 +297,7 @@ function AccionesFila({ fila, onVer, onEditar }) {
     fn();
   };
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="grid w-max grid-cols-2 gap-1.5">
       <button type="button" title="Ver cliente" aria-label="Ver cliente" onClick={parar(onVer)} className={`${base} hover:border-marca-500/50 hover:text-marca-400`}>
         <IconoNav nombre="clientes" className="h-4 w-4" />
       </button>
@@ -307,6 +317,16 @@ function AccionesFila({ fila, onVer, onEditar }) {
           <IconoNav nombre="whatsapp" className="h-4 w-4" />
         </a>
       )}
+      <button
+        type="button"
+        title={renovar.bloqueo || `Renovar ${renovar.servicio_nombre}`}
+        aria-label="Renovar"
+        disabled={Boolean(renovar.bloqueo)}
+        onClick={parar(() => onRenovar(renovar))}
+        className={`${base} hover:border-marca-500/50 hover:text-marca-400 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-white/10 disabled:hover:text-texto-suave`}
+      >
+        <IconoNav nombre="actualizar" className="h-4 w-4" />
+      </button>
     </div>
   );
 }

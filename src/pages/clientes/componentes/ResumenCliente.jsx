@@ -14,6 +14,7 @@ import { fecha, fechaCalendario, moneda } from '../../../utils/formato';
 import { enlaceWhatsApp, whatsappVisible } from '../../../utils/whatsapp';
 import { IconoServicio } from '../../dashboard/piezas.jsx';
 import { EtiquetasCliente, Semaforo, textoDias } from './Semaforo.jsx';
+import { objetivoRenovacion } from './DialogoRenovar.jsx';
 
 const FECHA_LARGA = { day: '2-digit', month: 'short', year: 'numeric' };
 
@@ -45,9 +46,10 @@ function BotonCopiar({ texto }) {
   );
 }
 
-export function ResumenCliente({ r, onEditar }) {
+export function ResumenCliente({ r, onEditar, onRenovar }) {
   const enlace = enlaceWhatsApp(r.whatsapp);
   const servicios = r.servicios_activos || [];
+  const renovar = objetivoRenovacion(r);
 
   return (
     <section className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#16171b] to-[#0e0f12] p-5 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)]">
@@ -86,6 +88,14 @@ export function ResumenCliente({ r, onEditar }) {
               WhatsApp
             </a>
           )}
+          <Boton
+            variante="secundario"
+            onClick={() => onRenovar(renovar)}
+            disabled={Boolean(renovar.bloqueo)}
+            title={renovar.bloqueo || `Renovar ${renovar.servicio_nombre}`}
+          >
+            Renovar
+          </Boton>
           <Boton variante="secundario" onClick={onEditar}>
             Editar datos
           </Boton>

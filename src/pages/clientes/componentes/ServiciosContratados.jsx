@@ -4,11 +4,13 @@
  * GET /admin/clientes/:id/servicios → una tarjeta por servicio vigente o
  * pendiente: estado, inicio, vencimiento con barra de días, perfil asignado
  * (cuenta + perfil; nunca la contraseña) y enlace al pedido.
- * "Recordar renovación" abre el mensaje preparado cuando vence en ≤ 7 días.
+ * "Recordar renovación" abre el mensaje preparado cuando vence en ≤ 7 días;
+ * "Renovar" crea la renovación con la lógica existente (DialogoRenovar).
  */
 import { Link } from 'react-router-dom';
 import { EstadoCarga, EstadoError, EstadoVacio } from '../../../components/ui';
 import { fecha, fechaCalendario, moneda } from '../../../utils/formato';
+import { IconoNav } from '../../../components/IconoNav.jsx';
 import { IconoServicio } from '../../dashboard/piezas.jsx';
 import { textoDias } from './Semaforo.jsx';
 
@@ -36,7 +38,7 @@ function BarraDias({ dias, duracion }) {
   );
 }
 
-export function ServiciosContratados({ datos, cargando, error, onReintentar, mensajeRecordar, onMensaje }) {
+export function ServiciosContratados({ datos, cargando, error, onReintentar, mensajeRecordar, onMensaje, onRenovar }) {
   if (error) return <EstadoError error={error} onReintentar={onReintentar} />;
   if (cargando && !datos) return <EstadoCarga texto="Cargando servicios…" />;
   const servicios = datos || [];
@@ -101,14 +103,27 @@ export function ServiciosContratados({ datos, cargando, error, onReintentar, men
                 {s.renovacion_en_curso && (
                   <p className="text-xs text-sky-300">Ya tiene una renovación en curso para este servicio.</p>
                 )}
-                {s.dias_restantes <= 7 && !s.renovacion_en_curso && mensajeRecordar?.disponible && (
-                  <button
-                    type="button"
-                    onClick={() => onMensaje(mensajeRecordar)}
-                    className="text-sm font-medium text-emerald-400 hover:underline"
-                  >
-                    Recordar renovación por WhatsApp →
-                  </button>
+                {!s.renovacion_en_curso && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => onRenovar({ pedido_id: s.pedido_id, servicio_nombre: s.servicio_nombre })}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-marca-500/40 bg-marca-500/10 px-3 py-1.5 text-sm font-semibold text-marca-400 transition hover:bg-marca-500/20"
+                    >
+                      <IconoNav nombre="actualizar" className="h-4 w-4" />
+                      Renovar
+                    </button>
+                    {s.dias_restantes <= 7 && mensajeRecordar?.disponible && (
+                      <button
+                        type="button"
+                        onClick={() => onMensaje(mensajeRecordar)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                      >
+                        <IconoNav nombre="whatsapp" className="h-4 w-4" />
+                        Recordar renovación
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ) : (
