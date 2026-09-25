@@ -212,7 +212,8 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
   const disponibles = Array.isArray(stock) ? stock.length : null;
 
   // Tras activar/asignar: abre la entrega directo, salvo sin stock o con el PIN pendiente de ajuste.
-  function trasAsignar({ perfilAsignado, pinPendiente, cuentaId }) {
+  // `nota` (reglas de perfil 2026-09-24): perfil conservado en la renovación, o aviso si no se pudo conservar.
+  function trasAsignar({ perfilAsignado, pinPendiente, cuentaId, nota }) {
     if (!perfilAsignado) {
       setAviso({
         tipo: 'info',
@@ -225,9 +226,20 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
         cuentaId,
       });
     } else {
-      setAviso(null);
+      setAviso(nota ? { tipo: 'info', texto: nota } : null);
       setModalEntregar(true);
     }
+  }
+
+  /** Texto para el panel según cómo se eligió el perfil (renovación conservada / aviso). */
+  function notaPerfil(r) {
+    if (r?.aviso_perfil || r?.aviso) return r.aviso_perfil || r.aviso;
+    if (r?.perfil_conservado || r?.conservado) {
+      const numero = r.perfil_numero || r.numero_perfil;
+      const nombre = r.perfil_nombre || r.nombre_perfil || (numero ? `Perfil ${numero}` : 'su perfil');
+      return `Renovación: se conservó el mismo perfil del cliente (${nombre}).`;
+    }
+    return null;
   }
 
   async function asignarAutomatico() {
@@ -236,7 +248,7 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
     try {
       const perfil = await inventarioApi.asignarAutomatico(pedido.id);
       onCambiado();
-      trasAsignar({ perfilAsignado: true, pinPendiente: perfil?.pin_estado === 'pendiente_ajuste', cuentaId: perfil?.cuenta_servicio_id });
+      trasAsignar({ perfilAsignado: true, pinPendiente: perfil?.pin_estado === 'pendiente_ajuste', cuentaId: perfil?.cuenta_servicio_id, nota: notaPerfil(perfil) });
     } catch (err) {
       setAviso({ tipo: 'error', texto: err?.message || 'No se pudo asignar un perfil automáticamente.' });
     } finally {
@@ -373,12 +385,12 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
       <DialogoConfirmacion
         abierto={confirmando === 'activar'}
         titulo={disponibles === 0 ? 'Activar servicio' : 'Activar y entregar'}
-        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará la fecha de vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios de renovación, y si hay un perfil disponible del inventario para "${pedido.servicio_nombre}" se le asignará automáticamente y se abrirá la entrega de credenciales.${disponibles === 0 ? ' Ahora mismo no hay perfiles disponibles de este servicio.' : ''}`}
+        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará el vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios y se asignará un perfil: ${pedido.pedido_origen_id ? 'como es una renovación, se conserva el mismo perfil del cliente (si otro cliente lo ocupa, se asigna otro disponible)' : 'el primer perfil disponible del inventario'}. Si no hay ningún perfil, el servicio NO se activa.${disponibles === 0 && !pedido.pedido_origen_id ? ' Ahora mismo no hay perfiles disponibles de este servicio.' : ''}`}
         textoConfirmar="Sí, activar"
         onConfirmar={async () => {
           const resultado = await pedidosApi.activar(pedido.id);
           onCambiado();
-          trasAsignar({ perfilAsignado: resultado?.perfil_asignado, pinPendiente: resultado?.perfil_pin_pendiente });
+          trasAsignar({ perfilAsignado: resultado?.perfil_asignado, pinPendiente: resultado?.perfil_pin_pendiente, nota: notaPerfil(resultado) });
         }}
         onCerrar={() => setConfirmando(null)}
       />

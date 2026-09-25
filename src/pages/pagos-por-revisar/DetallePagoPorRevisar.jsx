@@ -194,15 +194,21 @@ function Dato({ etiqueta, valor }) {
   );
 }
 
-/** PUT /admin/pagos-por-revisar/:pedidoId/aprobar — body: { monto, metodo }. Marca pagado + activa en un paso. */
+/**
+ * PUT /admin/pagos-por-revisar/:pedidoId/aprobar — body: { monto, metodo }. Marca pagado + activa en un paso.
+ * Reglas de perfil (2026-09-24): si no hay perfil disponible, el pago se aprueba pero el
+ * servicio NO se activa (queda Pagado): se muestra el aviso antes de volver a la bandeja.
+ */
 function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerrar, onAprobado }) {
   const [monto, setMonto] = useState('');
   const [metodo, setMetodo] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
+  const [avisoFinal, setAvisoFinal] = useState(null); // { texto, activado }
 
   useEffect(() => {
     if (!abierto) return;
+    setAvisoFinal(null);
     setMonto(montoSugerido != null ? String(montoSugerido) : '');
     setMetodo(metodoSugerido || '');
   }, [abierto, montoSugerido, metodoSugerido]);
@@ -219,7 +225,11 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
     setCargando(true);
     setError(null);
     try {
-      await pagosPorRevisarApi.aprobar(pedidoId, { monto: Number(monto), metodo: metodo.trim() || undefined });
+      const r = await pagosPorRevisarApi.aprobar(pedidoId, { monto: Number(monto), metodo: metodo.trim() || undefined });
+      if (r?.activado === false || r?.aviso) {
+        setAvisoFinal({ texto: r.aviso, activado: r?.activado !== false });
+        return;
+      }
       cerrar();
       onAprobado();
     } catch (err) {
@@ -235,16 +245,36 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
       titulo="Aprobar pago"
       onCerrar={cargando ? undefined : cerrar}
       pie={
-        <>
-          <Boton variante="secundario" onClick={cerrar} disabled={cargando}>
-            Cancelar
+        avisoFinal ? (
+          <Boton
+            onClick={() => {
+              cerrar();
+              onAprobado();
+            }}
+          >
+            Entendido
           </Boton>
-          <Boton type="submit" form="form-aprobar-pago" cargando={cargando}>
-            Confirmar y activar
-          </Boton>
-        </>
+        ) : (
+          <>
+            <Boton variante="secundario" onClick={cerrar} disabled={cargando}>
+              Cancelar
+            </Boton>
+            <Boton type="submit" form="form-aprobar-pago" cargando={cargando}>
+              Confirmar y activar
+            </Boton>
+          </>
+        )
       }
     >
+      {avisoFinal ? (
+        <div className="space-y-2 text-sm">
+          <p className="font-semibold text-texto">{avisoFinal.activado ? 'Pago aprobado y servicio activado.' : 'Pago aprobado. El servicio quedó Pagado, sin activar.'}</p>
+          <p className={avisoFinal.activado ? 'text-amber-300' : 'text-red-300'}>{avisoFinal.texto}</p>
+          {!avisoFinal.activado && (
+            <p className="text-texto-suave">Cuando cargues inventario, actívalo desde el pedido (o usa la entrega manual).</p>
+          )}
+        </div>
+      ) : (
       <form id="form-aprobar-pago" onSubmit={enviar} className="space-y-4">
         <p className="text-sm text-texto-suave">
           Esto marca el pedido como pagado y lo activa de inmediato (fecha de vencimiento + recordatorios se calculan igual que en el módulo Pedidos).
@@ -269,6 +299,7 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
       </form>
+      )}
     </Modal>
   );
 }
