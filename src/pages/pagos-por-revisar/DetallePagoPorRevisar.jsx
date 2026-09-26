@@ -108,6 +108,10 @@ export function DetallePagoPorRevisar() {
             etiqueta="Estado del pedido"
             valor={<Etiqueta color={COLOR_ESTADO_PEDIDO[pedido.estado]}>{humanizar(pedido.estado)}</Etiqueta>}
           />
+          <Dato
+            etiqueta="Tipo"
+            valor={pedido.pedido_origen_id ? <Etiqueta color="blue">Renovación</Etiqueta> : 'Compra nueva'}
+          />
         </dl>
       </Tarjeta>
 
@@ -311,7 +315,9 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, esReno
       ) : (
       <form id="form-aprobar-pago" onSubmit={enviar} className="space-y-4">
         <p className="text-sm text-texto-suave">
-          Esto marca el pedido como pagado y lo activa de inmediato (fecha de vencimiento + recordatorios se calculan igual que en el módulo Pedidos).
+          {esRenovacion
+            ? 'Registra el pago y confirma la renovación en un solo paso: el cliente sigue con la misma cuenta, correo, contraseña, perfil y PIN, y se suman los días del plan desde su vencimiento actual (o desde hoy si ya venció).'
+            : 'Esto marca el pedido como pagado y lo activa de inmediato (fecha de vencimiento + recordatorios se calculan igual que en el módulo Pedidos).'}
         </p>
         <Campo
           etiqueta="Monto"

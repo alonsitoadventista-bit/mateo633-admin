@@ -126,7 +126,7 @@ export function DetallePedido() {
         </div>
       </Tarjeta>
 
-      {(pedido.estado === 'pagado' || pedido.estado === 'activo' || (pedido.estado === 'cancelado' && inventario)) && (
+      {(pedido.estado === 'pagado' || pedido.estado === 'activo' || (pedido.estado === 'pendiente' && pedido.pedido_origen_id) || (pedido.estado === 'cancelado' && inventario)) && (
         <Tarjeta titulo="Perfil del inventario">
           {inventario ? (
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -139,7 +139,10 @@ export function DetallePedido() {
                   </span>
                 }
               />
-              <Dato etiqueta="Perfil" valor={inventario.numero_perfil || '—'} />
+              <Dato
+                etiqueta="Perfil"
+                valor={`${inventario.numero_perfil || '—'}${inventario.nombre_perfil ? ` · ${inventario.nombre_perfil}` : ''}${inventario.usa_pin ? ' · 🔒 con PIN' : ' · sin PIN'}`}
+              />
               <Dato
                 etiqueta="Estado del inventario"
                 valor={<Etiqueta color={COLOR_ESTADO_INVENTARIO[inventario.estado]}>{humanizar(inventario.estado)}</Etiqueta>}
@@ -152,7 +155,7 @@ export function DetallePedido() {
         </Tarjeta>
       )}
 
-      <Tarjeta>
+      <Tarjeta key={`${pedido.estado}-${pedido.fecha_pago || ''}`}>
         <div className="mb-3 flex gap-1 border-b border-borde">
           {PESTANAS.map((p) => (
             <button
@@ -251,6 +254,26 @@ function SinPerfil({ pedido, previsto }) {
   );
 }
 
+/** Pedido sin acciones: si ya fue renovado, indica a qué renovación pasó el servicio. */
+function SinAcciones({ pedido, previsto }) {
+  if (pedido.estado === 'renovado') {
+    return (
+      <p className="text-sm text-texto-suave">
+        Este pedido ya fue renovado: el servicio y su perfil continúan en{' '}
+        {previsto?.renovado_por ? (
+          <Link to={`/pedidos/${previsto.renovado_por}`} className="text-marca-500 hover:underline">
+            la renovación #{previsto.renovado_por}
+          </Link>
+        ) : (
+          'su renovación'
+        )}
+        .
+      </p>
+    );
+  }
+  return <p className="text-sm text-texto-suave">Este pedido está {humanizar(pedido.estado).toLowerCase()} y no admite más acciones.</p>;
+}
+
 function Dato({ etiqueta, valor }) {
   return (
     <div>
@@ -282,7 +305,7 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
   const mostrarModificar = esAdministrador && (porConfirmar || activa);
 
   if (!porConfirmar && !activa && pedido.estado !== 'vencido') {
-    return <p className="text-sm text-texto-suave">Esta renovación está {humanizar(pedido.estado).toLowerCase()} y no admite más acciones.</p>;
+    return <SinAcciones pedido={pedido} previsto={previsto} />;
   }
 
   return (
@@ -312,15 +335,19 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
           Liberar cuenta
         </Boton>
       )}
-      {mostrarModificar && (
-        <Boton variante="secundario" tamano="md" onClick={() => setModalModificar(true)}>
-          ⋯ Modificar renovación
-        </Boton>
-      )}
       {(porConfirmar || activa) && (
         <Boton variante="peligro" tamano="md" onClick={() => setConfirmando('cancelar')}>
           Cancelar
         </Boton>
+      )}
+      {mostrarModificar && (
+        <p className="basis-full border-t border-borde pt-2 text-xs text-texto-suave">
+          Opción de administrador, solo para casos especiales:{' '}
+          <button type="button" className="font-medium text-texto-suave underline decoration-dotted hover:text-texto" onClick={() => setModalModificar(true)}>
+            Modificar renovación
+          </button>{' '}
+          (cambiar cuenta, correo, contraseña, perfil o PIN; queda en la auditoría con el motivo).
+        </p>
       )}
       {porConfirmar && noConservable && (
         <p className="basis-full text-sm text-red-300">
@@ -482,11 +509,7 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
   const mostrarRenovar = pedido.estado === 'activo' || pedido.estado === 'vencido';
 
   if (!mostrarPagar && !mostrarActivar && !mostrarAsignarManual && !mostrarLiberar && !mostrarCancelar && !mostrarRenovar && !mostrarEntregar) {
-    return (
-      <p className="text-sm text-texto-suave">
-        Este pedido está {humanizar(pedido.estado).toLowerCase()} y no admite más acciones.
-      </p>
-    );
+    return <SinAcciones pedido={pedido} previsto={previsto} />;
   }
 
   return (

@@ -47,6 +47,35 @@ function describir(e) {
         titulo: 'Servicio activado',
         detalle: d.fecha_vencimiento ? `Vencimiento: ${fecha(d.fecha_vencimiento)}` : null,
       };
+    // Renovación = extensión de vigencia (regla 2026-09-25).
+    case 'renovacion_confirmada':
+      return {
+        cat: 'compras',
+        icono: 'actualizar',
+        color: 'text-emerald-400',
+        titulo: `Renovación confirmada: +${d.dias || ''} días`,
+        detalle: [
+          d.vencimiento_nuevo ? `Nuevo vencimiento: ${fecha(d.vencimiento_nuevo)}` : null,
+          d.perfil_conservado === false ? 'con otro perfil (renovación modificada)' : 'mismo perfil y cuenta',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      };
+    case 'pedido_renovado':
+      return { cat: 'compras', icono: 'actualizar', color: 'text-texto-suave', titulo: 'Servicio renovado', detalle: d.renovacion ? `Continúa en la renovación #${d.renovacion}` : null };
+    case 'renovacion_modificada':
+      return {
+        cat: 'servicio',
+        icono: 'alerta',
+        color: 'text-amber-400',
+        titulo: 'Renovación modificada (cambio de credenciales)',
+        detalle: d.motivo ? `Motivo: ${d.motivo}` : null,
+        cambios: (d.cambios || []).map((c) => ({ cuenta: 'Cuenta', correo: 'Correo', contrasena: 'Contraseña', perfil: 'Perfil', pin: 'PIN' })[c] || c).map((c) => `${c}: cambió`),
+      };
+    case 'renovacion_perfil_no_conservable':
+      return { cat: 'servicio', icono: 'alerta', color: 'text-amber-400', titulo: 'Renovación sin confirmar: no se pudo conservar el perfil', detalle: d.motivo || null };
+    case 'renovacion_reenlazada':
+      return { cat: 'compras', icono: 'info', color: 'text-texto-suave', titulo: 'Renovación enlazada al último pedido del servicio' };
     case 'pedido_vencido':
       return { cat: 'compras', icono: 'reloj', color: 'text-rose-400', titulo: 'Servicio vencido' };
     case 'pedido_cancelado':
@@ -59,6 +88,9 @@ function describir(e) {
     case 'pago_reportado_manychat':
       return { cat: 'pagos', icono: 'pagos', color: 'text-sky-400', titulo: 'El cliente reportó un pago' };
     case 'perfil_asignado':
+      if (d.conservado_de_renovacion) {
+        return { cat: 'servicio', icono: 'inventario', color: 'text-emerald-400', titulo: `Mismo perfil conservado${d.numero_perfil ? ` (perfil ${d.numero_perfil})` : ''}` };
+      }
       return { cat: 'servicio', icono: 'inventario', color: 'text-sky-400', titulo: `Perfil asignado${d.numero_perfil ? ` (perfil ${d.numero_perfil})` : ''}` };
     case 'cuenta_liberada':
       return { cat: 'servicio', icono: 'inventario', color: 'text-texto-suave', titulo: 'Perfil liberado' };
