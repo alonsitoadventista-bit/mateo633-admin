@@ -8,6 +8,7 @@
 import { fechaCalendario, moneda } from '../../../utils/formato';
 import { IconoServicio } from '../../dashboard/piezas.jsx';
 import { fechaRelativa, urgencia } from '../utilidades';
+import { serviciosUnicos } from '../serviciosCliente';
 
 const FECHA = { day: '2-digit', month: 'long', year: 'numeric' };
 
@@ -62,6 +63,8 @@ function ProximoVencimiento({ r }) {
 }
 
 export function IndicadoresFicha({ r, servicios, comunicaciones }) {
+  // Servicios activos = servicios ÚNICOS (Netflix, Disney+…), no pedidos ni pantallas.
+  const unicos = serviciosUnicos(r.servicios_activos);
   const pendientes = (servicios || []).filter((s) => s.estado !== 'activo').length;
   const ultima = comunicaciones?.[0];
   const fechaUltima = ultima?.fecha || r.ultimo_contacto;
@@ -71,11 +74,11 @@ export function IndicadoresFicha({ r, servicios, comunicaciones }) {
       <ProximoVencimiento r={r} />
 
       <Caja titulo="Servicios activos">
-        <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums text-texto">{r.cantidad_servicios_activos}</p>
+        <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums text-texto">{unicos.length}</p>
         <div className="mt-2 flex items-center gap-2">
           <div className="flex -space-x-1.5">
-            {(r.servicios_activos || []).slice(0, 4).map((s) => (
-              <IconoServicio key={s.pedido_id} nombre={s.servicio_nombre} imagenUrl={s.servicio_imagen_url} />
+            {unicos.slice(0, 4).map((s) => (
+              <IconoServicio key={s.servicio_id} nombre={s.servicio_nombre} imagenUrl={s.servicio_imagen_url} />
             ))}
           </div>
           <span className="text-xs text-texto-suave">

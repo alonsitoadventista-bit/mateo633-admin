@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 import * as pedidosApi from '../../../api/pedidos';
 import { Boton, Campo, Modal } from '../../../components/ui';
 import { ModalMensajeRenovacion } from '../../pedidos/ModalesRenovacion';
+import { SelectorServicioCliente } from './SelectorServicioCliente.jsx';
 
 /**
  * Qué pedido renovar para un cliente (fila del listado o resumen):
@@ -30,6 +31,41 @@ export function objetivoRenovacion(c) {
   if (vigente) return { pedido_id: vigente.pedido_id, servicio_nombre: vigente.servicio_nombre, en_curso };
   if (c.ultimo_pedido_id) return { pedido_id: c.ultimo_pedido_id, servicio_nombre: c.ultimo_servicio_nombre, en_curso };
   return { bloqueo: 'Todavía no tiene un servicio para renovar. Crea su primer pedido en Pedidos.' };
+}
+
+/**
+ * "Renovar" desde Clientes (ficha, tarjeta del servicio o lista): primero se elige
+ * el SERVICIO y, si tiene varias suscripciones, el PERFIL (SelectorServicioCliente;
+ * nunca por número de pedido); después, el mismo diálogo de confirmación.
+ * `solicitud` = { clienteId, cliente_nombre, servicioId?, tieneActivos, respaldo } o null.
+ * `respaldo` = objetivoRenovacion(c): para un cliente sin servicios activos (último vencido).
+ */
+export function RenovarServicioCliente({ solicitud, onCerrar, onRenovado }) {
+  const [objetivo, setObjetivo] = useState(null);
+
+  useEffect(() => {
+    setObjetivo(
+      solicitud && !solicitud.tieneActivos && solicitud.respaldo && !solicitud.respaldo.bloqueo
+        ? { ...solicitud.respaldo, cliente_nombre: solicitud.cliente_nombre }
+        : null
+    );
+  }, [solicitud]);
+
+  if (!solicitud) return null;
+  if (!objetivo) {
+    return (
+      <SelectorServicioCliente
+        clienteId={solicitud.clienteId}
+        accion="renovar"
+        servicioId={solicitud.servicioId || null}
+        onElegido={(s) =>
+          setObjetivo({ pedido_id: s.pedido_id, servicio_nombre: s.servicio_nombre, cliente_nombre: solicitud.cliente_nombre, en_curso: s.renovacion_en_curso })
+        }
+        onCerrar={onCerrar}
+      />
+    );
+  }
+  return <DialogoRenovar objetivo={objetivo} onCerrar={onCerrar} onRenovado={onRenovado} />;
 }
 
 /** `objetivo` = { pedido_id, servicio_nombre, cliente_nombre, en_curso? } o null (cerrado). */
@@ -125,7 +161,7 @@ export function DialogoRenovar({ objetivo, onCerrar, onRenovado }) {
               <>
                 {' '}
                 <Link to={`/pedidos/${error.renovacionId}`} className="text-marca-500 hover:underline">
-                  Resolver en el pedido #{error.renovacionId}
+                  Resolver en Pedidos →
                 </Link>
               </>
             )}

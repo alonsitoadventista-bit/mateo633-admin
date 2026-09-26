@@ -22,7 +22,7 @@ import { TarjetasClientes } from './componentes/TarjetasClientes.jsx';
 import { FlujoRecomendado } from './componentes/FlujoRecomendado.jsx';
 import { TablaClientes } from './componentes/TablaClientes.jsx';
 import { AyudaWhatsapp, ModalEditarCliente } from './componentes/ModalEditarCliente.jsx';
-import { DialogoRenovar } from './componentes/DialogoRenovar.jsx';
+import { RenovarServicioCliente, objetivoRenovacion } from './componentes/DialogoRenovar.jsx';
 import { ModalMensajeWhatsApp } from './componentes/ModalMensajeWhatsApp.jsx';
 
 const POR_PAGINA = 25;
@@ -164,7 +164,14 @@ export function ListaClientes() {
               filas={filas}
               onVer={(c) => navigate(`/clientes/${c.id}`)}
               onEditar={setEditando}
-              onRenovar={setRenovando}
+              onRenovar={(c) =>
+                setRenovando({
+                  clienteId: c.id,
+                  cliente_nombre: c.nombre,
+                  tieneActivos: (c.servicios_activos || []).length > 0,
+                  respaldo: objetivoRenovacion(c),
+                })
+              }
               onMensaje={(m, c) => setMensaje({ mensaje: m, nombre: c.nombre })}
             />
 
@@ -210,7 +217,7 @@ export function ListaClientes() {
         }}
       />
 
-      <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} onRenovado={recargar} />
+      <RenovarServicioCliente solicitud={renovando} onCerrar={() => setRenovando(null)} onRenovado={recargar} />
 
       <ModalMensajeWhatsApp mensaje={mensaje?.mensaje} nombreCliente={mensaje?.nombre} onCerrar={() => setMensaje(null)} />
     </div>

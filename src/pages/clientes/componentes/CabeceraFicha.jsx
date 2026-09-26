@@ -98,9 +98,9 @@ export function CabeceraFicha({ r, mensajes, onMensaje, onRenovar, onCredenciale
           </button>
           <button
             type="button"
-            onClick={() => onRenovar(renovar)}
+            onClick={() => onRenovar()}
             disabled={Boolean(renovar.bloqueo)}
-            title={renovar.bloqueo || `Renovar ${renovar.servicio_nombre}`}
+            title={renovar.bloqueo || 'Renovar un servicio del cliente'}
             className="inline-flex h-10 items-center gap-2 rounded-lg bg-gradient-to-b from-marca-400 to-marca-600 px-4 text-sm font-semibold text-fondo shadow-lg shadow-marca-900/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <IconoNav nombre="actualizar" className="h-4 w-4" />

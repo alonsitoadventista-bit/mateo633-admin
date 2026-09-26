@@ -20,6 +20,7 @@ import { BotonProximaAccion } from './BotonProximaAccion.jsx';
 import { MenuAcciones } from './MenuAcciones.jsx';
 import { EtiquetasCliente, Semaforo } from './Semaforo.jsx';
 import { objetivoRenovacion } from './DialogoRenovar.jsx';
+import { serviciosUnicos } from '../serviciosCliente';
 
 const BORDE_ESTADO = {
   activo: 'bg-emerald-400',
@@ -30,7 +31,7 @@ const BORDE_ESTADO = {
 
 const FECHA = { day: '2-digit', month: 'short', year: 'numeric' };
 
-/** Servicio principal = el vigente que vence primero; "+N" si tiene más. */
+/** Servicio principal = el vigente que vence primero; "+N" = otros SERVICIOS (no pedidos). */
 function ServicioPrincipal({ c }) {
   const s = c.servicios_activos?.[0];
   if (!s) {
@@ -40,9 +41,10 @@ function ServicioPrincipal({ c }) {
       <span className="text-xs text-texto-suave">Sin servicios</span>
     );
   }
-  const extra = c.servicios_activos.length - 1;
+  const unicos = serviciosUnicos(c.servicios_activos);
+  const extra = unicos.length - 1;
   return (
-    <div className="flex items-center gap-2" title={c.servicios_activos.map((x) => x.servicio_nombre).join(', ')}>
+    <div className="flex items-center gap-2" title={unicos.map((x) => x.servicio_nombre).join(', ')}>
       <IconoServicio nombre={s.servicio_nombre} imagenUrl={s.servicio_imagen_url} tamano="md" />
       <span className="truncate text-sm font-medium text-texto">{s.servicio_nombre}</span>
       {extra > 0 && (
@@ -101,9 +103,9 @@ function Acciones({ c, onVer, onEditar, onRenovar }) {
       <button
         type="button"
         aria-label="Renovar"
-        title={renovar.bloqueo || `Renovar ${renovar.servicio_nombre}`}
+        title={renovar.bloqueo || 'Renovar un servicio del cliente'}
         disabled={Boolean(renovar.bloqueo)}
-        onClick={() => onRenovar({ ...renovar, cliente_nombre: c.nombre })}
+        onClick={() => onRenovar(c)}
         className={`${base} border-marca-500/40 bg-marca-500/15 text-marca-400 hover:bg-marca-500/30`}
       >
         <IconoNav nombre="actualizar" className="h-4 w-4" />

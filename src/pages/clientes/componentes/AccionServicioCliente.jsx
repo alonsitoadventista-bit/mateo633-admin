@@ -1,25 +1,26 @@
 /**
  * pages/clientes/componentes/AccionServicioCliente.jsx  (Clientes CRM)
  * -----------------------------------------
- * Acciones de la ficha sobre un servicio ACTIVO del cliente, con los MISMOS
+ * Acciones de la ficha sobre un SERVICIO activo del cliente, con los MISMOS
  * modales (y la misma lógica) que el detalle del pedido:
- * - "Credenciales": ver/entregar credenciales (ModalEntregarCredenciales).
+ * - "Credenciales": ver/entregar credenciales (ModalEntregarCredenciales),
+ *   con su historial de entregas.
  * - "Modificar cuenta/perfil": módulo EXCEPCIONAL, solo administrador
  *   (PUT /admin/pedidos/:id/modificar-perfil): motivo obligatorio y auditoría;
  *   al terminar abre la entrega de las credenciales nuevas.
- * Si el cliente tiene más de un servicio activo, primero se elige cuál.
+ * Primero se elige el SERVICIO (y el perfil si tiene varios del mismo servicio)
+ * con SelectorServicioCliente: nunca por número de pedido. Internamente se
+ * usa el pedido de esa suscripción (misma cuenta y perfil).
  */
 import { useEffect, useState } from 'react';
 import * as pedidosApi from '../../../api/pedidos';
-import { Boton, Modal, Selector } from '../../../components/ui';
+import { Boton, Modal } from '../../../components/ui';
 import { ModalEntregarCredenciales } from '../../pedidos/DetallePedido.jsx';
 import { ModalModificarCuentaPerfil } from '../../pedidos/ModalesRenovacion';
+import { SelectorServicioCliente } from './SelectorServicioCliente.jsx';
 
-/**
- * `accion` = 'credenciales' | 'modificar' | null (cerrado).
- * `servicios` = servicios activos del resumen: [{ pedido_id, servicio_nombre }].
- */
-export function AccionServicioCliente({ accion, servicios = [], onCerrar, onCambiado }) {
+/** `accion` = 'credenciales' | 'modificar' | null (cerrado). */
+export function AccionServicioCliente({ accion, clienteId, onCerrar, onCambiado }) {
   const [pedidoId, setPedidoId] = useState(null);
   const [pedido, setPedido] = useState(null);
   const [modo, setModo] = useState(null);
@@ -30,8 +31,8 @@ export function AccionServicioCliente({ accion, servicios = [], onCerrar, onCamb
     setPedido(null);
     setError(null);
     setModo(accion);
-    setPedidoId(accion && servicios.length === 1 ? servicios[0].pedido_id : null);
-  }, [accion]); // a propósito sin `servicios`: ver arriba
+    setPedidoId(null);
+  }, [accion]);
 
   useEffect(() => {
     if (!pedidoId) return;
@@ -48,7 +49,7 @@ export function AccionServicioCliente({ accion, servicios = [], onCerrar, onCamb
   if (!accion) return null;
 
   if (!pedidoId) {
-    return <ModalElegirServicio servicios={servicios} accion={accion} onElegir={setPedidoId} onCerrar={onCerrar} />;
+    return <SelectorServicioCliente clienteId={clienteId} accion={accion} onElegido={(s) => setPedidoId(s.pedido_id)} onCerrar={onCerrar} />;
   }
   if (error) {
     return (
@@ -73,34 +74,4 @@ export function AccionServicioCliente({ accion, servicios = [], onCerrar, onCamb
     );
   }
   return <ModalEntregarCredenciales abierto pedido={pedido} onCerrar={onCerrar} onEntregado={() => onCambiado?.()} />;
-}
-
-function ModalElegirServicio({ servicios, accion, onElegir, onCerrar }) {
-  const [valor, setValor] = useState('');
-  return (
-    <Modal
-      abierto
-      titulo={accion === 'modificar' ? 'Modificar cuenta/perfil: elige el servicio' : 'Credenciales: elige el servicio'}
-      onCerrar={onCerrar}
-      pie={
-        <>
-          <Boton variante="secundario" onClick={onCerrar}>
-            Cancelar
-          </Boton>
-          <Boton onClick={() => valor && onElegir(Number(valor))} disabled={!valor}>
-            Continuar
-          </Boton>
-        </>
-      }
-    >
-      <Selector
-        etiqueta="Servicio activo"
-        name="servicio"
-        value={valor}
-        onChange={(e) => setValor(e.target.value)}
-        placeholder="Elige un servicio"
-        opciones={servicios.map((s) => ({ valor: String(s.pedido_id), texto: `${s.servicio_nombre} · pedido #${s.pedido_id}` }))}
-      />
-    </Modal>
-  );
 }

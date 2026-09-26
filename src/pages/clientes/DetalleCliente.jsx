@@ -31,7 +31,7 @@ import { ModalAcceso } from './componentes/ModalAcceso.jsx';
 import { ServiciosContratados } from './componentes/ServiciosContratados.jsx';
 import { HistorialCliente } from './componentes/HistorialCliente.jsx';
 import { PestanaComunicacion } from './componentes/PestanaComunicacion.jsx';
-import { DialogoRenovar } from './componentes/DialogoRenovar.jsx';
+import { RenovarServicioCliente, objetivoRenovacion } from './componentes/DialogoRenovar.jsx';
 import { AccionServicioCliente } from './componentes/AccionServicioCliente.jsx';
 import { useAuth } from '../../auth/useAuth';
 
@@ -81,7 +81,15 @@ export function DetalleCliente() {
   if (!r) return null;
 
   const mensajeRecordar = (mensajes.data || []).find((m) => m.tipo === 'recordar_renovacion');
-  const renovar = (o) => setRenovando({ ...o, cliente_nombre: r.nombre });
+  // Renovar (cabecera o tarjeta de un servicio): se elige el SERVICIO, nunca un pedido.
+  const renovar = (servicioId = null) =>
+    setRenovando({
+      clienteId: id,
+      cliente_nombre: r.nombre,
+      servicioId,
+      tieneActivos: (r.servicios_activos || []).length > 0,
+      respaldo: objetivoRenovacion(r),
+    });
 
   return (
     <div className="space-y-4">
@@ -143,7 +151,7 @@ export function DetalleCliente() {
 
       <AccionServicioCliente
         accion={accionServicio}
-        servicios={r.servicios_activos || []}
+        clienteId={id}
         onCerrar={() => setAccionServicio(null)}
         onCambiado={() => {
           refetch();
@@ -152,8 +160,8 @@ export function DetalleCliente() {
         }}
       />
 
-      <DialogoRenovar
-        objetivo={renovando}
+      <RenovarServicioCliente
+        solicitud={renovando}
         onCerrar={() => setRenovando(null)}
         onRenovado={() => {
           refetch();
