@@ -30,6 +30,7 @@ import * as pedidosApi from '../../api/pedidos';
 import * as inventarioApi from '../../api/inventario';
 import { useAuth } from '../../auth/useAuth';
 import { ModalConfirmarRenovacion, ModalMensajeRenovacion, ModalModificarRenovacion, ModalModificarCuentaPerfil } from './ModalesRenovacion';
+import { BarraOperativa } from './BarraOperativa.jsx';
 import {
   Tarjeta,
   Tabla,
@@ -290,14 +291,13 @@ function Dato({ etiqueta, valor }) {
  * entrega. "Modificar renovación" es excepcional y solo del administrador.
  */
 function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
-  const navigate = useNavigate();
   const { tienePermiso } = useAuth();
   const esAdministrador = tienePermiso(['administrador']);
   const [modalConfirmar, setModalConfirmar] = useState(false);
   const [modalModificar, setModalModificar] = useState(false);
   const [modalMensaje, setModalMensaje] = useState(null); // { mensaje } | {} (lo pide al backend)
   const [modalEntregar, setModalEntregar] = useState(false);
-  const [confirmando, setConfirmando] = useState(null); // 'cancelar' | 'renovar' | 'liberar'
+  const [confirmando, setConfirmando] = useState(null); // 'cancelar' | 'liberar'
 
   const noConservable = previsto?.estado === 'no_conservable' || previsto?.estado === 'sin_historial';
   const porConfirmar = pedido.estado === 'pendiente' || pedido.estado === 'pagado';
@@ -315,41 +315,24 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
           ✅ Confirmar renovación
         </Boton>
       )}
-      {activa && (
-        <Boton variante="primario" tamano="md" onClick={() => setModalMensaje({})}>
-          💬 Mensaje de renovación
-        </Boton>
-      )}
-      {activa && inventario?.estado === 'asignado' && (
-        <Boton variante="secundario" tamano="md" onClick={() => setModalEntregar(true)}>
-          📲 Credenciales
-        </Boton>
-      )}
-      {activa && esAdministrador && (
-        <Boton
-          variante="secundario"
-          tamano="md"
-          onClick={() => setModalModificar(true)}
-          title="Solo casos especiales: cambia cuenta, correo, contraseña, perfil o PIN (motivo obligatorio, queda en la auditoría)"
-        >
-          ⚠ Modificar cuenta/perfil
-        </Boton>
-      )}
-      {(activa || pedido.estado === 'vencido') && (
-        <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('renovar')}>
-          Renovar
-        </Boton>
-      )}
-      {inventario?.estado === 'vencido' && (
-        <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('liberar')}>
-          Liberar cuenta
-        </Boton>
-      )}
-      {(porConfirmar || activa) && (
-        <Boton variante="peligro" tamano="md" onClick={() => setConfirmando('cancelar')}>
-          Cancelar
-        </Boton>
-      )}
+      <BarraOperativa
+        pedido={pedido}
+        puedeRenovar={activa || pedido.estado === 'vencido'}
+        onCredenciales={activa && inventario?.estado === 'asignado' ? () => setModalEntregar(true) : null}
+        onModificar={activa && esAdministrador ? () => setModalModificar(true) : null}
+        extras={
+          inventario?.estado === 'vencido' ? (
+            <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('liberar')}>
+              Liberar cuenta
+            </Boton>
+          ) : null
+        }
+        opciones={[
+          ...(activa ? [{ texto: 'Mensaje de renovación', onClick: () => setModalMensaje({}) }] : []),
+          ...(porConfirmar || activa ? [{ texto: 'Cancelar renovación', onClick: () => setConfirmando('cancelar') }] : []),
+        ]}
+        onCambiado={onCambiado}
+      />
       {mostrarModificar && porConfirmar && (
         <p className="basis-full border-t border-borde pt-2 text-xs text-texto-suave">
           Opción de administrador, solo para casos especiales:{' '}
@@ -419,29 +402,17 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
         }}
         onCerrar={() => setConfirmando(null)}
       />
-      <DialogoConfirmacion
-        abierto={confirmando === 'renovar'}
-        titulo="Renovar otra vez"
-        mensaje={`¿Crear la próxima renovación de "${pedido.cliente_nombre}" (mismo plan de "${pedido.servicio_nombre}")?`}
-        textoConfirmar="Sí, renovar"
-        onConfirmar={async () => {
-          const nuevo = await pedidosApi.renovar(pedido.id);
-          navigate(`/pedidos/${nuevo.id}`);
-        }}
-        onCerrar={() => setConfirmando(null)}
-      />
     </div>
   );
 }
 
 /** Botones de acción según el estado actual, cada uno mapeado 1:1 a un endpoint ya existente. */
 function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
-  const navigate = useNavigate();
   const [modalPago, setModalPago] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
   const [modalEntregaManual, setModalEntregaManual] = useState(false);
   const [modalEntregar, setModalEntregar] = useState(false);
-  const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar' | 'liberar'
+  const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'liberar'
   const [asignandoAuto, setAsignandoAuto] = useState(false);
   const [aviso, setAviso] = useState(null); // { tipo: 'info' | 'pin' | 'error', texto, cuentaId? }
   // Módulo EXCEPCIONAL "Modificar cuenta/perfil" (solo administrador; fuera del flujo normal).
@@ -537,21 +508,6 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
           {disponibles === 0 ? 'Activar servicio' : '⚡ Activar y entregar'}
         </Boton>
       )}
-      {mostrarEntregar && (
-        <Boton variante="primario" tamano="md" onClick={() => setModalEntregar(true)}>
-          📲 Entregar credenciales
-        </Boton>
-      )}
-      {tienePermiso(['administrador']) && pedido.estado === 'activo' && inventario?.estado === 'asignado' && (
-        <Boton
-          variante="secundario"
-          tamano="md"
-          onClick={() => setModalModificarPerfil(true)}
-          title="Solo casos especiales: cambia cuenta, correo, contraseña, perfil o PIN (motivo obligatorio, queda en la auditoría)"
-        >
-          ⚠ Modificar cuenta/perfil
-        </Boton>
-      )}
       {mostrarAsignarAuto && (
         <Boton variante="primario" tamano="md" onClick={asignarAutomatico} cargando={asignandoAuto} disabled={disponibles === 0}>
           {disponibles === 0
@@ -559,31 +515,33 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
             : `⚡ Asignar automáticamente${disponibles != null ? ` (${disponibles} disponible${disponibles === 1 ? '' : 's'})` : ''}`}
         </Boton>
       )}
-      {mostrarAsignarManual && (
-        <Boton variante="secundario" tamano="md" onClick={() => setModalAsignar(true)}>
-          Asignar manualmente
-        </Boton>
-      )}
-      {mostrarAsignarManual && (
-        <Boton variante="peligro" tamano="md" onClick={() => setModalEntregaManual(true)}>
-          ⚠ Entrega manual (emergencia)
-        </Boton>
-      )}
-      {mostrarLiberar && (
-        <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('liberar')}>
-          Liberar cuenta
-        </Boton>
-      )}
-      {mostrarRenovar && (
-        <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('renovar')}>
-          Renovar
-        </Boton>
-      )}
-      {mostrarCancelar && (
-        <Boton variante="peligro" tamano="md" onClick={() => setConfirmando('cancelar')}>
-          Cancelar pedido
-        </Boton>
-      )}
+      <BarraOperativa
+        pedido={pedido}
+        puedeRenovar={mostrarRenovar}
+        onCredenciales={mostrarEntregar ? () => setModalEntregar(true) : null}
+        onModificar={mostrarEntregar && tienePermiso(['administrador']) ? () => setModalModificarPerfil(true) : null}
+        extras={
+          <>
+            {mostrarAsignarManual && (
+              <Boton variante="secundario" tamano="md" onClick={() => setModalAsignar(true)}>
+                Asignar manualmente
+              </Boton>
+            )}
+            {mostrarAsignarManual && (
+              <Boton variante="peligro" tamano="md" onClick={() => setModalEntregaManual(true)}>
+                ⚠ Entrega manual (emergencia)
+              </Boton>
+            )}
+            {mostrarLiberar && (
+              <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('liberar')}>
+                Liberar cuenta
+              </Boton>
+            )}
+          </>
+        }
+        opciones={mostrarCancelar ? [{ texto: 'Cancelar pedido', onClick: () => setConfirmando('cancelar') }] : []}
+        onCambiado={onCambiado}
+      />
 
 
       {aviso && (
@@ -691,17 +649,6 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
         onCerrar={() => setConfirmando(null)}
       />
 
-      <DialogoConfirmacion
-        abierto={confirmando === 'renovar'}
-        titulo="Renovar pedido"
-        mensaje={`¿Crear un pedido nuevo de renovación para "${pedido.cliente_nombre}", mismo plan de "${pedido.servicio_nombre}"?`}
-        textoConfirmar="Sí, renovar"
-        onConfirmar={async () => {
-          const nuevo = await pedidosApi.renovar(pedido.id);
-          navigate(`/pedidos/${nuevo.id}`);
-        }}
-        onCerrar={() => setConfirmando(null)}
-      />
     </div>
   );
 }
