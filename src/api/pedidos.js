@@ -57,6 +57,12 @@ export const confirmarRenovacion = (id, datos) => api.put(`/admin/pedidos/${id}/
  */
 export const modificarRenovacion = (id, datos) => api.put(`/admin/pedidos/${id}/modificar-renovacion`, datos);
 
+/**
+ * PUT /admin/pedidos/:id/modificar-perfil — body { perfil_id, motivo }. Solo administrador.
+ * Módulo EXCEPCIONAL "Modificar cuenta/perfil" sobre cualquier servicio activo. -> { pedido, perfil, cambios, requiere_entrega }
+ */
+export const modificarPerfil = (id, datos) => api.put(`/admin/pedidos/${id}/modificar-perfil`, datos);
+
 /** GET /admin/pedidos/:id/mensaje-renovacion — { texto, cliente_whatsapp, credenciales_cambiaron, ... } */
 export const mensajeRenovacion = (id) => api.get(`/admin/pedidos/${id}/mensaje-renovacion`);
 

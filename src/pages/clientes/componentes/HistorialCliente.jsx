@@ -72,6 +72,15 @@ function describir(e) {
         detalle: d.motivo ? `Motivo: ${d.motivo}` : null,
         cambios: (d.cambios || []).map((c) => ({ cuenta: 'Cuenta', correo: 'Correo', contrasena: 'Contraseña', perfil: 'Perfil', pin: 'PIN' })[c] || c).map((c) => `${c}: cambió`),
       };
+    case 'cuenta_perfil_modificado':
+      return {
+        cat: 'servicio',
+        icono: 'alerta',
+        color: 'text-amber-400',
+        titulo: 'Cuenta/perfil modificado (cambio excepcional)',
+        detalle: d.motivo ? `Motivo: ${d.motivo}` : null,
+        cambios: (d.cambios || []).map((c) => ({ cuenta: 'Cuenta', correo: 'Correo', contrasena: 'Contraseña', perfil: 'Perfil', pin: 'PIN' })[c] || c).map((c) => `${c}: cambió`),
+      };
     case 'renovacion_perfil_no_conservable':
       return { cat: 'servicio', icono: 'alerta', color: 'text-amber-400', titulo: 'Renovación sin confirmar: no se pudo conservar el perfil', detalle: d.motivo || null };
     case 'renovacion_reenlazada':

@@ -29,7 +29,7 @@ import { useApi } from '../../hooks/useApi';
 import * as pedidosApi from '../../api/pedidos';
 import * as inventarioApi from '../../api/inventario';
 import { useAuth } from '../../auth/useAuth';
-import { ModalConfirmarRenovacion, ModalMensajeRenovacion, ModalModificarRenovacion } from './ModalesRenovacion';
+import { ModalConfirmarRenovacion, ModalMensajeRenovacion, ModalModificarRenovacion, ModalModificarCuentaPerfil } from './ModalesRenovacion';
 import {
   Tarjeta,
   Tabla,
@@ -344,7 +344,7 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
         <p className="basis-full border-t border-borde pt-2 text-xs text-texto-suave">
           Opción de administrador, solo para casos especiales:{' '}
           <button type="button" className="font-medium text-texto-suave underline decoration-dotted hover:text-texto" onClick={() => setModalModificar(true)}>
-            Modificar renovación
+            {activa ? 'Modificar cuenta/perfil' : 'Modificar renovación'}
           </button>{' '}
           (cambiar cuenta, correo, contraseña, perfil o PIN; queda en la auditoría con el motivo).
         </p>
@@ -434,6 +434,9 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
   const [confirmando, setConfirmando] = useState(null); // 'activar' | 'cancelar' | 'renovar' | 'liberar'
   const [asignandoAuto, setAsignandoAuto] = useState(false);
   const [aviso, setAviso] = useState(null); // { tipo: 'info' | 'pin' | 'error', texto, cuentaId? }
+  // Módulo EXCEPCIONAL "Modificar cuenta/perfil" (solo administrador; fuera del flujo normal).
+  const { tienePermiso } = useAuth();
+  const [modalModificarPerfil, setModalModificarPerfil] = useState(false);
 
   // Flujo rápido: cuántos perfiles disponibles hay del servicio (endpoint de solo lectura ya existente).
   // Una renovación nunca busca inventario.
@@ -561,6 +564,15 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
           Cancelar pedido
         </Boton>
       )}
+      {tienePermiso(['administrador']) && pedido.estado === 'activo' && inventario?.estado === 'asignado' && (
+        <p className="basis-full border-t border-borde pt-2 text-xs text-texto-suave">
+          Opción de administrador, solo para casos especiales:{' '}
+          <button type="button" className="font-medium text-texto-suave underline decoration-dotted hover:text-texto" onClick={() => setModalModificarPerfil(true)}>
+            Modificar cuenta/perfil
+          </button>{' '}
+          (cambiar cuenta, correo, contraseña, perfil o PIN; queda en la auditoría con el motivo).
+        </p>
+      )}
 
       {aviso && (
         <p
@@ -606,6 +618,17 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
         pedido={pedido}
         onCerrar={() => setModalEntregar(false)}
         onEntregado={onCambiado}
+      />
+
+      <ModalModificarCuentaPerfil
+        abierto={modalModificarPerfil}
+        pedido={pedido}
+        onCerrar={() => setModalModificarPerfil(false)}
+        onModificada={() => {
+          setModalModificarPerfil(false);
+          onCambiado();
+          setModalEntregar(true); // credenciales nuevas: se entregan
+        }}
       />
 
       <ModalEntregaManual

@@ -180,11 +180,20 @@ export function ModalMensajeRenovacion({ abierto, pedidoId, mensaje, onCerrar })
 }
 
 /**
- * PUT /admin/pedidos/:id/modificar-renovacion — EXCEPCIONAL (solo administrador).
- * El cliente pasa a otro perfil del inventario: cambia cuenta/correo/contraseña/perfil/PIN.
- * Motivo obligatorio; queda en la auditoría (qué cambió, fecha, administrador, motivo).
+ * Módulo EXCEPCIONAL (solo administrador): el cliente pasa a otro perfil del
+ * inventario (cambia cuenta/correo/contraseña/perfil/PIN). Motivo obligatorio;
+ * queda en la auditoría (qué cambió, fecha, administrador, motivo).
+ * - Servicio ACTIVO (compra nueva o renovación): "Modificar cuenta/perfil"
+ *   (PUT modificar-perfil); la vigencia no cambia.
+ * - Renovación pendiente/pagada: "Modificar renovación" (PUT modificar-renovacion);
+ *   además la confirma (+días del plan).
  */
 export function ModalModificarRenovacion({ abierto, pedido, onCerrar, onModificada }) {
+  return <ModalModificarCuentaPerfil abierto={abierto} pedido={pedido} onCerrar={onCerrar} onModificada={onModificada} />;
+}
+
+export function ModalModificarCuentaPerfil({ abierto, pedido, onCerrar, onModificada }) {
+  const esActivo = pedido.estado === 'activo';
   const { data: disponibles, cargando: cargandoLista, error: errorLista } = useApi(
     () => (abierto ? inventarioApi.listar({ servicio_id: pedido.servicio_id, estado: 'disponible' }) : Promise.resolve([])),
     [abierto, pedido.servicio_id]
@@ -207,14 +216,13 @@ export function ModalModificarRenovacion({ abierto, pedido, onCerrar, onModifica
     setCargando(true);
     setError(null);
     try {
-      const r = await pedidosApi.modificarRenovacion(pedido.id, {
-        perfil_id: Number(perfilId),
-        motivo: motivo.trim(),
-        ...(pendiente ? { monto: Number(pedido.precio_pagado) } : {}),
-      });
+      const datos = { perfil_id: Number(perfilId), motivo: motivo.trim() };
+      const r = esActivo
+        ? await pedidosApi.modificarPerfil(pedido.id, datos)
+        : await pedidosApi.modificarRenovacion(pedido.id, { ...datos, ...(pendiente ? { monto: Number(pedido.precio_pagado) } : {}) });
       onModificada(r);
     } catch (err) {
-      setError(err?.message || 'No se pudo modificar la renovación.');
+      setError(err?.message || 'No se pudo cambiar el perfil del cliente.');
     } finally {
       setCargando(false);
     }
@@ -225,7 +233,7 @@ export function ModalModificarRenovacion({ abierto, pedido, onCerrar, onModifica
   return (
     <Modal
       abierto={abierto}
-      titulo="Modificar renovación (excepcional)"
+      titulo={esActivo ? 'Modificar cuenta/perfil (excepcional)' : 'Modificar renovación (excepcional)'}
       onCerrar={cargando ? undefined : onCerrar}
       pie={
         <>
@@ -243,7 +251,9 @@ export function ModalModificarRenovacion({ abierto, pedido, onCerrar, onModifica
           Solo para casos especiales (cuenta saturada, pedido del cliente, problema técnico). {pedido.cliente_nombre} cambia de
           credenciales: habrá que entregarle los datos nuevos. Su perfil actual queda "por rotar".
         </p>
-        {pedido.estado !== 'activo' && (
+        {esActivo ? (
+          <p className="text-texto-suave">La vigencia del servicio no cambia. Queda en la auditoría: qué cambió, fecha, administrador y motivo.</p>
+        ) : (
           <p className="text-texto-suave">
             Además se confirma la renovación: +{pedido.duracion_dias} días de vigencia
             {pendiente ? ` y se registra el pago de ${moneda(pedido.precio_pagado)}` : ''}.
