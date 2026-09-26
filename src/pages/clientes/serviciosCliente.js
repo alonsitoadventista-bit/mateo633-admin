@@ -60,11 +60,14 @@ export function nombrePerfil(s) {
   return s.nombre_perfil || (s.numero_perfil ? `Perfil ${s.numero_perfil}` : 'Perfil');
 }
 
-/** "Perfil 3 · cuenta@correo · vence 24 oct. 2026" — cómo se distingue una suscripción. */
+/**
+ * "Netflix · Perfil 1 · vence 20 oct." — cómo se distingue una suscripción en la
+ * operación diaria (nunca por número de pedido). La cuenta va aparte, como detalle.
+ */
 export function etiquetaSuscripcion(s) {
-  const partes = [nombrePerfil(s)];
-  if (s.identificador_cuenta) partes.push(s.identificador_cuenta);
-  if (s.fecha_vencimiento) partes.push(`vence ${fechaCalendario(s.fecha_vencimiento, { day: '2-digit', month: 'short', year: 'numeric' })}`);
+  const partes = [s.servicio_nombre, nombrePerfil(s)];
+  // es-PE formatea "25-oct."; para leer rápido: "25 oct."
+  if (s.fecha_vencimiento) partes.push(`vence ${fechaCalendario(s.fecha_vencimiento).replace('-', ' ')}`);
   return partes.join(' · ');
 }
 

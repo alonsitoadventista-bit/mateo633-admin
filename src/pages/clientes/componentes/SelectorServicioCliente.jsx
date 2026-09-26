@@ -122,7 +122,10 @@ export function SelectorServicioCliente({ clienteId, accion, servicioId = null, 
               onClick={() => onElegido(s, grupo)}
               className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-left text-sm transition hover:border-marca-500/50"
             >
-              <span className="text-texto">{etiquetaSuscripcion(s)}</span>
+              <span className="min-w-0">
+                <span className="block text-texto">{etiquetaSuscripcion(s)}</span>
+                {s.identificador_cuenta && <span className="block truncate text-xs text-texto-suave">Cuenta: {s.identificador_cuenta}</span>}
+              </span>
               {s.renovacion_en_curso && <span className="shrink-0 text-xs text-sky-300">renovación en curso</span>}
             </button>
           </li>
