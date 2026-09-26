@@ -3,7 +3,8 @@
  * -----------------------------------------
  * Ficha CRM del cliente, de arriba abajo:
  * 1. Cabecera: avatar, nombre, estado comercial, etiquetas y botones
- *    Contactar por WhatsApp (mensaje preparado) · Renovar · Editar · ⋯ (Acceso).
+ *    Contactar por WhatsApp (mensaje preparado) · Renovar · Credenciales ·
+ *    Modificar cuenta/perfil (solo administrador, excepcional) · Editar · ⋯ (Acceso).
  * 2. Banner "Próxima acción recomendada".
  * 3. Indicadores: próximo vencimiento destacado, servicios activos,
  *    total histórico pagado y última comunicación.
@@ -31,6 +32,8 @@ import { ServiciosContratados } from './componentes/ServiciosContratados.jsx';
 import { HistorialCliente } from './componentes/HistorialCliente.jsx';
 import { PestanaComunicacion } from './componentes/PestanaComunicacion.jsx';
 import { DialogoRenovar } from './componentes/DialogoRenovar.jsx';
+import { AccionServicioCliente } from './componentes/AccionServicioCliente.jsx';
+import { useAuth } from '../../auth/useAuth';
 
 const PESTANAS = [
   { valor: 'historial', texto: 'Historial' },
@@ -53,6 +56,9 @@ export function DetalleCliente() {
   // Se incrementa al renovar: recarga las pestañas (historial, pedidos, pagos), que cargan sus propios datos.
   const [version, setVersion] = useState(0);
   const [pestana, setPestana] = useState('historial');
+  // 'credenciales' | 'modificar' (Modificar cuenta/perfil: solo administrador) | null
+  const [accionServicio, setAccionServicio] = useState(null);
+  const { tienePermiso } = useAuth();
 
   if (error) {
     return (
@@ -86,6 +92,9 @@ export function DetalleCliente() {
         mensajes={mensajes.data}
         onMensaje={setMensajeAbierto}
         onRenovar={renovar}
+        onCredenciales={() => setAccionServicio('credenciales')}
+        onModificarPerfil={() => setAccionServicio('modificar')}
+        esAdministrador={tienePermiso(['administrador'])}
         onEditar={() => setModalEditar(true)}
         onAcceso={() => setModalAcceso(true)}
       />
@@ -131,6 +140,17 @@ export function DetalleCliente() {
       />
 
       <ModalAcceso abierto={modalAcceso} cliente={r} onCerrar={() => setModalAcceso(false)} onCambiado={refetch} />
+
+      <AccionServicioCliente
+        accion={accionServicio}
+        servicios={r.servicios_activos || []}
+        onCerrar={() => setAccionServicio(null)}
+        onCambiado={() => {
+          refetch();
+          servicios.refetch();
+          setVersion((v) => v + 1);
+        }}
+      />
 
       <DialogoRenovar
         objetivo={renovando}

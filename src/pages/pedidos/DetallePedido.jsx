@@ -325,6 +325,16 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
           📲 Credenciales
         </Boton>
       )}
+      {activa && esAdministrador && (
+        <Boton
+          variante="secundario"
+          tamano="md"
+          onClick={() => setModalModificar(true)}
+          title="Solo casos especiales: cambia cuenta, correo, contraseña, perfil o PIN (motivo obligatorio, queda en la auditoría)"
+        >
+          ⚠ Modificar cuenta/perfil
+        </Boton>
+      )}
       {(activa || pedido.estado === 'vencido') && (
         <Boton variante="secundario" tamano="md" onClick={() => setConfirmando('renovar')}>
           Renovar
@@ -340,11 +350,11 @@ function AccionesRenovacion({ pedido, inventario, previsto, onCambiado }) {
           Cancelar
         </Boton>
       )}
-      {mostrarModificar && (
+      {mostrarModificar && porConfirmar && (
         <p className="basis-full border-t border-borde pt-2 text-xs text-texto-suave">
           Opción de administrador, solo para casos especiales:{' '}
           <button type="button" className="font-medium text-texto-suave underline decoration-dotted hover:text-texto" onClick={() => setModalModificar(true)}>
-            {activa ? 'Modificar cuenta/perfil' : 'Modificar renovación'}
+            Modificar renovación
           </button>{' '}
           (cambiar cuenta, correo, contraseña, perfil o PIN; queda en la auditoría con el motivo).
         </p>
@@ -532,6 +542,16 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
           📲 Entregar credenciales
         </Boton>
       )}
+      {tienePermiso(['administrador']) && pedido.estado === 'activo' && inventario?.estado === 'asignado' && (
+        <Boton
+          variante="secundario"
+          tamano="md"
+          onClick={() => setModalModificarPerfil(true)}
+          title="Solo casos especiales: cambia cuenta, correo, contraseña, perfil o PIN (motivo obligatorio, queda en la auditoría)"
+        >
+          ⚠ Modificar cuenta/perfil
+        </Boton>
+      )}
       {mostrarAsignarAuto && (
         <Boton variante="primario" tamano="md" onClick={asignarAutomatico} cargando={asignandoAuto} disabled={disponibles === 0}>
           {disponibles === 0
@@ -564,15 +584,7 @@ function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
           Cancelar pedido
         </Boton>
       )}
-      {tienePermiso(['administrador']) && pedido.estado === 'activo' && inventario?.estado === 'asignado' && (
-        <p className="basis-full border-t border-borde pt-2 text-xs text-texto-suave">
-          Opción de administrador, solo para casos especiales:{' '}
-          <button type="button" className="font-medium text-texto-suave underline decoration-dotted hover:text-texto" onClick={() => setModalModificarPerfil(true)}>
-            Modificar cuenta/perfil
-          </button>{' '}
-          (cambiar cuenta, correo, contraseña, perfil o PIN; queda en la auditoría con el motivo).
-        </p>
-      )}
+
 
       {aviso && (
         <p
@@ -1002,7 +1014,8 @@ const TEXTO_COPIADO = {
   mensaje: 'Mensaje copiado',
 };
 
-function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
+/** Exportado: también lo usa la ficha del cliente ("Credenciales"). */
+export function ModalEntregarCredenciales({ abierto, pedido, onCerrar, onEntregado }) {
   const [datos, setDatos] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);

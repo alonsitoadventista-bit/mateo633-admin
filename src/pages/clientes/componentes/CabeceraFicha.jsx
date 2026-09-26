@@ -28,7 +28,9 @@ function mensajeContextual(r, mensajes) {
   );
 }
 
-export function CabeceraFicha({ r, mensajes, onMensaje, onRenovar, onEditar, onAcceso }) {
+export function CabeceraFicha({ r, mensajes, onMensaje, onRenovar, onCredenciales, onModificarPerfil, esAdministrador, onEditar, onAcceso }) {
+  // Credenciales y Modificar cuenta/perfil actúan sobre un servicio ACTIVO del cliente.
+  const sinServicioActivo = !(r.servicios_activos?.length > 0);
   const [copiado, setCopiado] = useState(false);
   const enlace = enlaceWhatsApp(r.whatsapp);
   const mensaje = mensajeContextual(r, mensajes);
@@ -104,6 +106,32 @@ export function CabeceraFicha({ r, mensajes, onMensaje, onRenovar, onEditar, onA
             <IconoNav nombre="actualizar" className="h-4 w-4" />
             Renovar
           </button>
+          <button
+            type="button"
+            onClick={onCredenciales}
+            disabled={sinServicioActivo}
+            title={sinServicioActivo ? 'No tiene un servicio activo' : 'Ver y entregar sus credenciales'}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-texto transition hover:border-marca-500/50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <IconoNav nombre="inventario" className="h-4 w-4" />
+            Credenciales
+          </button>
+          {esAdministrador && (
+            <button
+              type="button"
+              onClick={onModificarPerfil}
+              disabled={sinServicioActivo}
+              title={
+                sinServicioActivo
+                  ? 'No tiene un servicio activo'
+                  : 'Solo casos especiales: cambia cuenta, correo, contraseña, perfil o PIN (motivo obligatorio, queda en la auditoría)'
+              }
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 text-sm font-semibold text-amber-300 transition hover:border-amber-400/70 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <IconoNav nombre="alerta" className="h-4 w-4" />
+              Modificar cuenta/perfil
+            </button>
+          )}
           <button
             type="button"
             onClick={onEditar}
