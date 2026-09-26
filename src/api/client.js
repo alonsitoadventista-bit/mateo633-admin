@@ -20,12 +20,14 @@ import { obtenerToken, notificar401 } from '../auth/sesion';
 
 /** Error normalizado que lanzan todas las llamadas fallidas. */
 export class ErrorApi extends Error {
-  constructor(mensaje, status, codigo = null) {
+  constructor(mensaje, status, codigo = null, datos = null) {
     super(mensaje || 'Error de conexión con el servidor');
     this.name = 'ErrorApi';
     this.status = status ?? 0;
     // Código de negocio opcional del backend (ej. PERFIL_RENOVACION_NO_CONSERVABLE).
     this.codigo = codigo;
+    // Datos de negocio opcionales (ej. renovacion_id para resolver en el pedido).
+    this.datos = datos;
   }
 }
 
@@ -85,7 +87,7 @@ export async function solicitar(ruta, opciones = {}) {
 
   const datos = await respuesta.json().catch(() => null);
   if (!respuesta.ok) {
-    throw new ErrorApi(datos?.error || `Error ${respuesta.status}`, respuesta.status, datos?.codigo || null);
+    throw new ErrorApi(datos?.error || `Error ${respuesta.status}`, respuesta.status, datos?.codigo || null, datos?.datos || null);
   }
   return datos;
 }

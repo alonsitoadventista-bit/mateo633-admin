@@ -50,6 +50,8 @@ export function DetalleCliente() {
   const [modalAcceso, setModalAcceso] = useState(false);
   const [mensajeAbierto, setMensajeAbierto] = useState(null);
   const [renovando, setRenovando] = useState(null);
+  // Se incrementa al renovar: recarga las pestañas (historial, pedidos, pagos), que cargan sus propios datos.
+  const [version, setVersion] = useState(0);
   const [pestana, setPestana] = useState('historial');
 
   if (error) {
@@ -109,9 +111,9 @@ export function DetalleCliente() {
           <Segmentos opciones={PESTANAS} valor={pestana} onCambio={setPestana} etiqueta="Secciones de la ficha" />
         </div>
 
-        {pestana === 'historial' && <HistorialCliente clienteId={id} />}
-        {pestana === 'pedidos' && <PestanaPedidos clienteId={id} />}
-        {pestana === 'pagos' && <PestanaPagos clienteId={id} />}
+        {pestana === 'historial' && <HistorialCliente key={version} clienteId={id} />}
+        {pestana === 'pedidos' && <PestanaPedidos key={version} clienteId={id} />}
+        {pestana === 'pagos' && <PestanaPagos key={version} clienteId={id} />}
         {pestana === 'comunicacion' && (
           <PestanaComunicacion clienteId={id} mensajes={mensajes} comunicaciones={comunicaciones} onMensaje={setMensajeAbierto} />
         )}
@@ -130,7 +132,15 @@ export function DetalleCliente() {
 
       <ModalAcceso abierto={modalAcceso} cliente={r} onCerrar={() => setModalAcceso(false)} onCambiado={refetch} />
 
-      <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} />
+      <DialogoRenovar
+        objetivo={renovando}
+        onCerrar={() => setRenovando(null)}
+        onRenovado={() => {
+          refetch();
+          servicios.refetch();
+          setVersion((v) => v + 1);
+        }}
+      />
 
       <ModalMensajeWhatsApp mensaje={mensajeAbierto} nombreCliente={r.nombre} onCerrar={() => setMensajeAbierto(null)} />
     </div>

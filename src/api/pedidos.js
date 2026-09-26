@@ -63,6 +63,13 @@ export const modificarRenovacion = (id, datos) => api.put(`/admin/pedidos/${id}/
  */
 export const modificarPerfil = (id, datos) => api.put(`/admin/pedidos/${id}/modificar-perfil`, datos);
 
+/**
+ * POST /admin/pedidos/:id/renovar-y-confirmar — body opcional { monto, metodo }.
+ * "Renovar" desde Clientes: mismo flujo que confirmarRenovacion, en un paso (si ya hay una renovación en curso, confirma esa).
+ * -> { pedido, perfil, conservado, mensaje, renovacion_id, ya_existia }. Si no se puede conservar: 409 con datos.renovacion_id.
+ */
+export const renovarYConfirmar = (id, datos) => api.post(`/admin/pedidos/${id}/renovar-y-confirmar`, datos);
+
 /** GET /admin/pedidos/:id/mensaje-renovacion — { texto, cliente_whatsapp, credenciales_cambiaron, ... } */
 export const mensajeRenovacion = (id) => api.get(`/admin/pedidos/${id}/mensaje-renovacion`);
 

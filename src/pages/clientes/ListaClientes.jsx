@@ -210,7 +210,7 @@ export function ListaClientes() {
         }}
       />
 
-      <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} />
+      <DialogoRenovar objetivo={renovando} onCerrar={() => setRenovando(null)} onRenovado={recargar} />
 
       <ModalMensajeWhatsApp mensaje={mensaje?.mensaje} nombreCliente={mensaje?.nombre} onCerrar={() => setMensaje(null)} />
     </div>

@@ -5,7 +5,7 @@
  * pendiente: estado, inicio, vencimiento con barra de días, perfil asignado
  * (cuenta + perfil; nunca la contraseña) y enlace al pedido.
  * "Recordar renovación" abre el mensaje preparado cuando vence en ≤ 7 días;
- * "Renovar" crea la renovación con la lógica existente (DialogoRenovar).
+ * "Renovar" confirma la renovación en un paso, mismo flujo que Pedidos (DialogoRenovar).
  * F2: franja superior con el color de la marca y cuenta regresiva destacada.
  */
 import { Link } from 'react-router-dom';
@@ -108,13 +108,13 @@ export function ServiciosContratados({ datos, cargando, error, onReintentar, men
                   )}
                 </div>
                 {s.renovacion_en_curso && (
-                  <p className="text-xs text-sky-300">Ya tiene una renovación en curso para este servicio.</p>
+                  <p className="text-xs text-sky-300">Tiene una renovación en curso: "Renovar" la confirma (no se duplica).</p>
                 )}
-                {!s.renovacion_en_curso && (
+                {(
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => onRenovar({ pedido_id: s.pedido_id, servicio_nombre: s.servicio_nombre })}
+                      onClick={() => onRenovar({ pedido_id: s.pedido_id, servicio_nombre: s.servicio_nombre, en_curso: s.renovacion_en_curso })}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-marca-500/40 bg-marca-500/10 px-3 py-1.5 text-sm font-semibold text-marca-400 transition hover:bg-marca-500/20"
                     >
                       <IconoNav nombre="actualizar" className="h-4 w-4" />
