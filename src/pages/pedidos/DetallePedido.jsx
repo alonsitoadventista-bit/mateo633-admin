@@ -55,6 +55,8 @@ export function DetallePedido() {
   const { id } = useParams();
   const { data: pedido, cargando, error, refetch } = useApi(() => pedidosApi.detalle(id), [id]);
   const { data: inventario, refetch: refetchInventario } = useApi(() => inventarioApi.porPedido(id), [id]);
+  // Renovación: qué perfil conservará al activarse (o por qué no). Solo lectura.
+  const { data: previsto, refetch: refetchPrevisto } = useApi(() => pedidosApi.perfilPrevisto(id), [id]);
 
   const [pestana, setPestana] = useState('pagos');
 
@@ -112,9 +114,11 @@ export function DetallePedido() {
           <ControlAcciones
             pedido={pedido}
             inventario={inventario}
+            previsto={previsto}
             onCambiado={() => {
               refetch();
               refetchInventario();
+              refetchPrevisto();
             }}
           />
         </div>
@@ -141,10 +145,7 @@ export function DetallePedido() {
               <Dato etiqueta="Notas internas" valor={inventario.notas_internas || '—'} />
             </dl>
           ) : (
-            <EstadoVacio
-              titulo="Sin perfil asignado"
-              descripcion="No había ningún perfil disponible del inventario para este servicio al momento de activar. Usa '⚡ Asignar automáticamente' (o 'Asignar manualmente') arriba en cuanto haya inventario cargado."
-            />
+            <SinPerfil pedido={pedido} previsto={previsto} />
           )}
         </Tarjeta>
       )}
@@ -183,6 +184,73 @@ export function DetallePedido() {
   }
 }
 
+/**
+ * Tarjeta del perfil cuando el pedido todavía no tiene uno. En una
+ * renovación, el perfil del cliente se traslada AL ACTIVAR: aquí se muestra
+ * cuál se conservará, o el motivo por el que no se puede (regla 2026-09-25:
+ * entonces NO se activa sola y decide el administrador).
+ */
+function SinPerfil({ pedido, previsto }) {
+  if (previsto?.renovado_por) {
+    return (
+      <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm">
+        <p className="font-semibold text-texto">El perfil pasó a la renovación</p>
+        <p className="text-texto-suave">
+          Este pedido ya fue renovado: el perfil del cliente está ahora en la{' '}
+          <Link to={`/pedidos/${previsto.renovado_por}`} className="text-marca-500 hover:underline">
+            renovación #{previsto.renovado_por}
+          </Link>
+          . No hace falta asignarle otro.
+        </p>
+      </div>
+    );
+  }
+  if (previsto?.es_renovacion && previsto.estado === 'conservable') {
+    return (
+      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
+        <p className="font-semibold text-texto">
+          Renovación: {pedido.estado === 'pagado' ? 'al activar se conservará' : 'puede conservar'} el mismo perfil del cliente
+        </p>
+        <p className="text-texto">
+          {previsto.perfil?.nombre} <span className="text-texto-suave">· {previsto.perfil?.identificador_cuenta}</span>
+        </p>
+        <p className="text-texto-suave">
+          Mismo correo, contraseña y perfil.
+          {previsto.desde_pedido && previsto.desde_pedido !== pedido.pedido_origen_id ? ` Hoy está en el pedido #${previsto.desde_pedido}.` : ''}
+        </p>
+      </div>
+    );
+  }
+  if (previsto?.es_renovacion && previsto.estado === 'no_conservable') {
+    return (
+      <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm">
+        <p className="font-semibold text-red-300">Renovación: no se puede conservar el perfil del cliente</p>
+        <p className="text-texto">{previsto.motivo}</p>
+        <p className="text-texto-suave">
+          La renovación no se activa sola. Decide tú: resuelve el perfil anterior o usa "Activar con otro perfil" (el cliente cambia de credenciales).
+        </p>
+      </div>
+    );
+  }
+  if (previsto?.es_renovacion && previsto.estado === 'sin_historial') {
+    return (
+      <EstadoVacio
+        titulo="Renovación sin perfil anterior registrado"
+        descripcion="El pedido anterior nunca tuvo un perfil del inventario: al activar se asigna el primer perfil disponible."
+      />
+    );
+  }
+  if (pedido.estado === 'pagado') {
+    return <EstadoVacio titulo="Perfil pendiente" descripcion="El perfil se asigna al activar el servicio." />;
+  }
+  return (
+    <EstadoVacio
+      titulo="Sin perfil asignado"
+      descripcion="No había ningún perfil disponible del inventario para este servicio al momento de activar. Usa '⚡ Asignar automáticamente' (o 'Asignar manualmente') arriba en cuanto haya inventario cargado."
+    />
+  );
+}
+
 function Dato({ etiqueta, valor }) {
   return (
     <div>
@@ -193,7 +261,7 @@ function Dato({ etiqueta, valor }) {
 }
 
 /** Botones de acción según el estado actual, cada uno mapeado 1:1 a un endpoint ya existente. */
-function ControlAcciones({ pedido, inventario, onCambiado }) {
+function ControlAcciones({ pedido, inventario, previsto, onCambiado }) {
   const navigate = useNavigate();
   const [modalPago, setModalPago] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
@@ -250,25 +318,34 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
       onCambiado();
       trasAsignar({ perfilAsignado: true, pinPendiente: perfil?.pin_estado === 'pendiente_ajuste', cuentaId: perfil?.cuenta_servicio_id, nota: notaPerfil(perfil) });
     } catch (err) {
+      if (err?.codigo === 'PERFIL_RENOVACION_NO_CONSERVABLE') onCambiado();
       setAviso({ tipo: 'error', texto: err?.message || 'No se pudo asignar un perfil automáticamente.' });
     } finally {
       setAsignandoAuto(false);
     }
   }
 
+  // Renovación (regla 2026-09-25): conserva el perfil histórico del cliente; si no puede, no se activa sola.
+  const conservable = previsto?.es_renovacion && previsto.estado === 'conservable';
+  const noConservable = previsto?.es_renovacion && previsto.estado === 'no_conservable';
+  const yaRenovado = !!previsto?.renovado_por; // su perfil pasó a la renovación
+
   const mostrarPagar = pedido.estado === 'pendiente';
-  const mostrarActivar = pedido.estado === 'pagado';
+  const mostrarActivar = pedido.estado === 'pagado' && !noConservable;
   // Solo se ofrece "Asignar manualmente" cuando el pedido ya está pagado/activo Y no tiene ningún perfil asignado todavía.
-  const mostrarAsignarManual = (pedido.estado === 'pagado' || pedido.estado === 'activo') && !inventario;
+  // Nunca en una renovación que conserva su perfil: obligaría a elegir OTRO perfil (o crear otra cuenta).
+  const mostrarAsignarManual = (pedido.estado === 'pagado' || pedido.estado === 'activo') && !inventario && !conservable && !yaRenovado;
   const mostrarLiberar = inventario?.estado === 'vencido';
   // Paso FINAL de entrega (migración 021): pedido activo con su perfil asignado.
   const mostrarEntregar = pedido.estado === 'activo' && inventario?.estado === 'asignado';
   // Flujo rápido: pedido activo sin perfil -> asignación automática como acción principal.
-  const mostrarAsignarAuto = pedido.estado === 'activo' && !inventario;
+  const mostrarAsignarAuto = pedido.estado === 'activo' && !inventario && !yaRenovado && !noConservable;
+  // Renovación que no puede conservar su perfil: solo con decisión explícita del administrador.
+  const mostrarOtroPerfil = noConservable && !inventario && (pedido.estado === 'pagado' || pedido.estado === 'activo');
   const mostrarCancelar = pedido.estado === 'pendiente' || pedido.estado === 'pagado' || pedido.estado === 'activo';
   const mostrarRenovar = pedido.estado === 'activo' || pedido.estado === 'vencido';
 
-  if (!mostrarPagar && !mostrarActivar && !mostrarAsignarManual && !mostrarLiberar && !mostrarCancelar && !mostrarRenovar && !mostrarEntregar) {
+  if (!mostrarPagar && !mostrarActivar && !mostrarAsignarManual && !mostrarLiberar && !mostrarCancelar && !mostrarRenovar && !mostrarEntregar && !mostrarOtroPerfil) {
     return (
       <p className="text-sm text-texto-suave">
         Este pedido está {humanizar(pedido.estado).toLowerCase()} y no admite más acciones.
@@ -285,7 +362,12 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
       )}
       {mostrarActivar && (
         <Boton variante="primario" tamano="md" onClick={() => setConfirmando('activar')}>
-          {disponibles === 0 ? 'Activar servicio' : '⚡ Activar y entregar'}
+          {disponibles === 0 && !conservable ? 'Activar servicio' : '⚡ Activar y entregar'}
+        </Boton>
+      )}
+      {mostrarOtroPerfil && (
+        <Boton variante="peligro" tamano="md" onClick={() => setConfirmando('otro_perfil')}>
+          {pedido.estado === 'pagado' ? 'Activar con otro perfil…' : 'Asignar otro perfil…'}
         </Boton>
       )}
       {mostrarEntregar && (
@@ -294,8 +376,10 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
         </Boton>
       )}
       {mostrarAsignarAuto && (
-        <Boton variante="primario" tamano="md" onClick={asignarAutomatico} cargando={asignandoAuto} disabled={disponibles === 0}>
-          {disponibles === 0
+        <Boton variante="primario" tamano="md" onClick={asignarAutomatico} cargando={asignandoAuto} disabled={disponibles === 0 && !conservable}>
+          {conservable
+            ? '⚡ Asignar su mismo perfil'
+            : disponibles === 0
             ? `Sin perfiles disponibles de ${pedido.servicio_nombre}`
             : `⚡ Asignar automáticamente${disponibles != null ? ` (${disponibles} disponible${disponibles === 1 ? '' : 's'})` : ''}`}
         </Boton>
@@ -385,12 +469,44 @@ function ControlAcciones({ pedido, inventario, onCambiado }) {
       <DialogoConfirmacion
         abierto={confirmando === 'activar'}
         titulo={disponibles === 0 ? 'Activar servicio' : 'Activar y entregar'}
-        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará el vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios y se asignará un perfil: ${pedido.pedido_origen_id ? 'como es una renovación, se conserva el mismo perfil del cliente (si otro cliente lo ocupa, se asigna otro disponible)' : 'el primer perfil disponible del inventario'}. Si no hay ningún perfil, el servicio NO se activa.${disponibles === 0 && !pedido.pedido_origen_id ? ' Ahora mismo no hay perfiles disponibles de este servicio.' : ''}`}
+        mensaje={`¿Activar el servicio de "${pedido.cliente_nombre}"? Se calculará el vencimiento (${pedido.duracion_dias} días), se programarán los 3 recordatorios y se asignará un perfil: ${
+          conservable
+            ? `como es una renovación, se conserva el mismo perfil del cliente (${previsto.perfil?.nombre} · ${previsto.perfil?.identificador_cuenta}), con el mismo correo y contraseña`
+            : pedido.pedido_origen_id
+            ? 'como es una renovación, se conserva el mismo perfil del cliente (si no se puede, NO se activa y verás el motivo)'
+            : 'el primer perfil disponible del inventario'
+        }. Si no hay ningún perfil, el servicio NO se activa.${disponibles === 0 && !pedido.pedido_origen_id ? ' Ahora mismo no hay perfiles disponibles de este servicio.' : ''}`}
         textoConfirmar="Sí, activar"
         onConfirmar={async () => {
-          const resultado = await pedidosApi.activar(pedido.id);
-          onCambiado();
-          trasAsignar({ perfilAsignado: resultado?.perfil_asignado, pinPendiente: resultado?.perfil_pin_pendiente, nota: notaPerfil(resultado) });
+          try {
+            const resultado = await pedidosApi.activar(pedido.id);
+            onCambiado();
+            trasAsignar({ perfilAsignado: resultado?.perfil_asignado, pinPendiente: resultado?.perfil_pin_pendiente, nota: notaPerfil(resultado) });
+          } catch (err) {
+            // Renovación que no puede conservar su perfil: refresca para mostrar el motivo y la decisión.
+            if (err?.codigo === 'PERFIL_RENOVACION_NO_CONSERVABLE') onCambiado();
+            throw err;
+          }
+        }}
+        onCerrar={() => setConfirmando(null)}
+      />
+
+      <DialogoConfirmacion
+        abierto={confirmando === 'otro_perfil'}
+        titulo={pedido.estado === 'pagado' ? 'Activar con otro perfil' : 'Asignar otro perfil'}
+        mensaje={`${previsto?.motivo || ''} Si continúas, se asigna OTRO perfil disponible y "${pedido.cliente_nombre}" cambia de credenciales (correo, contraseña y perfil). Hazlo solo si ya lo acordaste con el cliente. Queda registrado en la auditoría.`}
+        textoConfirmar="Sí, asignar otro perfil"
+        variante="peligro"
+        onConfirmar={async () => {
+          if (pedido.estado === 'pagado') {
+            const resultado = await pedidosApi.activar(pedido.id, { aceptarOtroPerfil: true });
+            onCambiado();
+            trasAsignar({ perfilAsignado: resultado?.perfil_asignado, pinPendiente: resultado?.perfil_pin_pendiente, nota: notaPerfil(resultado) });
+          } else {
+            const perfil = await inventarioApi.asignarAutomatico(pedido.id, { aceptarOtroPerfil: true });
+            onCambiado();
+            trasAsignar({ perfilAsignado: true, pinPendiente: perfil?.pin_estado === 'pendiente_ajuste', cuentaId: perfil?.cuenta_servicio_id, nota: notaPerfil(perfil) });
+          }
         }}
         onCerrar={() => setConfirmando(null)}
       />

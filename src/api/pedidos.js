@@ -38,8 +38,19 @@ export const crear = ({ cliente_id, plan_id }) => api.post('/admin/pedidos', { c
 /** PUT /admin/pedidos/:id/marcar-pagado — body: { monto, metodo, notas? } */
 export const marcarPagado = (id, datos) => api.put(`/admin/pedidos/${id}/marcar-pagado`, datos);
 
-/** PUT /admin/pedidos/:id/activar — calcula vencimiento y programa 3 recordatorios */
-export const activar = (id) => api.put(`/admin/pedidos/${id}/activar`);
+/**
+ * PUT /admin/pedidos/:id/activar — calcula vencimiento y programa 3 recordatorios.
+ * Una renovación que no puede conservar su perfil NO se activa (409), salvo
+ * `aceptarOtroPerfil`: decisión explícita del administrador (el cliente cambia de credenciales).
+ */
+export const activar = (id, { aceptarOtroPerfil = false } = {}) =>
+  api.put(`/admin/pedidos/${id}/activar`, aceptarOtroPerfil ? { aceptar_otro_perfil: true } : undefined);
+
+/**
+ * GET /admin/pedidos/:id/perfil-previsto — solo lectura: qué perfil conservará la renovación al activarse.
+ * -> { es_renovacion, estado: 'asignado'|'conservable'|'no_conservable'|'sin_historial', perfil, desde_pedido, motivo }
+ */
+export const perfilPrevisto = (id) => api.get(`/admin/pedidos/${id}/perfil-previsto`);
 
 /** PUT /admin/pedidos/:id/cancelar */
 export const cancelar = (id) => api.put(`/admin/pedidos/${id}/cancelar`);

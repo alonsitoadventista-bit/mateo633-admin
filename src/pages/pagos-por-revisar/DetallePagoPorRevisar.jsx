@@ -227,7 +227,7 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
     try {
       const r = await pagosPorRevisarApi.aprobar(pedidoId, { monto: Number(monto), metodo: metodo.trim() || undefined });
       if (r?.activado === false || r?.aviso) {
-        setAvisoFinal({ texto: r.aviso, activado: r?.activado !== false });
+        setAvisoFinal({ texto: r.aviso, activado: r?.activado !== false, codigo: r?.codigo || null });
         return;
       }
       cerrar();
@@ -271,7 +271,19 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
           <p className="font-semibold text-texto">{avisoFinal.activado ? 'Pago aprobado y servicio activado.' : 'Pago aprobado. El servicio quedó Pagado, sin activar.'}</p>
           <p className={avisoFinal.activado ? 'text-amber-300' : 'text-red-300'}>{avisoFinal.texto}</p>
           {!avisoFinal.activado && (
-            <p className="text-texto-suave">Cuando cargues inventario, actívalo desde el pedido (o usa la entrega manual).</p>
+            <p className="text-texto-suave">
+              {avisoFinal.codigo === 'PERFIL_RENOVACION_NO_CONSERVABLE' ? (
+                <>
+                  Es una renovación y su perfil no se puede conservar: revisa el{' '}
+                  <Link to={`/pedidos/${pedidoId}`} className="text-marca-500 hover:underline">
+                    pedido #{pedidoId}
+                  </Link>{' '}
+                  y decide ahí (resolver el perfil anterior o activar con otro perfil).
+                </>
+              ) : (
+                'Cuando cargues inventario, actívalo desde el pedido (o usa la entrega manual).'
+              )}
+            </p>
           )}
         </div>
       ) : (
