@@ -20,6 +20,7 @@ import { useApi } from '../../hooks/useApi';
 import * as pedidosApi from '../../api/pedidos';
 import * as pagosPorRevisarApi from '../../api/pagosPorRevisar';
 import * as dashboardApi from '../../api/dashboard';
+import { ModalMensajeRenovacion } from '../pedidos/ModalesRenovacion';
 import { urlArchivo } from '../../api/client';
 import {
   Tarjeta,
@@ -164,6 +165,7 @@ export function DetallePagoPorRevisar() {
         pedidoId={pedidoId}
         montoSugerido={detalles.monto ?? pedido.precio_pagado}
         metodoSugerido={detalles.metodo}
+        esRenovacion={!!pedido.pedido_origen_id}
         onCerrar={() => setModalAprobar(false)}
         onAprobado={() => navigate('/pagos-por-revisar')}
       />
@@ -199,12 +201,13 @@ function Dato({ etiqueta, valor }) {
  * Reglas de perfil (2026-09-24): si no hay perfil disponible, el pago se aprueba pero el
  * servicio NO se activa (queda Pagado): se muestra el aviso antes de volver a la bandeja.
  */
-function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerrar, onAprobado }) {
+function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, esRenovacion, onCerrar, onAprobado }) {
   const [monto, setMonto] = useState('');
   const [metodo, setMetodo] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [avisoFinal, setAvisoFinal] = useState(null); // { texto, activado }
+  const [mensajeRenovacion, setMensajeRenovacion] = useState(null); // renovación confirmada (regla 2026-09-25)
 
   useEffect(() => {
     if (!abierto) return;
@@ -226,6 +229,10 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
     setError(null);
     try {
       const r = await pagosPorRevisarApi.aprobar(pedidoId, { monto: Number(monto), metodo: metodo.trim() || undefined });
+      if (r?.es_renovacion && r?.mensaje_renovacion) {
+        setMensajeRenovacion(r.mensaje_renovacion);
+        return;
+      }
       if (r?.activado === false || r?.aviso) {
         setAvisoFinal({ texto: r.aviso, activado: r?.activado !== false, codigo: r?.codigo || null });
         return;
@@ -239,10 +246,25 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
     }
   }
 
+  if (mensajeRenovacion) {
+    return (
+      <ModalMensajeRenovacion
+        abierto={abierto}
+        pedidoId={pedidoId}
+        mensaje={mensajeRenovacion}
+        onCerrar={() => {
+          setMensajeRenovacion(null);
+          cerrar();
+          onAprobado();
+        }}
+      />
+    );
+  }
+
   return (
     <Modal
       abierto={abierto}
-      titulo="Aprobar pago"
+      titulo={esRenovacion ? 'Aprobar pago de renovación' : 'Aprobar pago'}
       onCerrar={cargando ? undefined : cerrar}
       pie={
         avisoFinal ? (
@@ -260,7 +282,7 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
               Cancelar
             </Boton>
             <Boton type="submit" form="form-aprobar-pago" cargando={cargando}>
-              Confirmar y activar
+              {esRenovacion ? '✅ Confirmar renovación' : 'Confirmar y activar'}
             </Boton>
           </>
         )
@@ -278,7 +300,7 @@ function ModalAprobar({ abierto, pedidoId, montoSugerido, metodoSugerido, onCerr
                   <Link to={`/pedidos/${pedidoId}`} className="text-marca-500 hover:underline">
                     pedido #{pedidoId}
                   </Link>{' '}
-                  y decide ahí (resolver el perfil anterior o activar con otro perfil).
+                  y decide ahí con "Modificar renovación".
                 </>
               ) : (
                 'Cuando cargues inventario, actívalo desde el pedido (o usa la entrega manual).'

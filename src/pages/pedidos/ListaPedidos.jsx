@@ -112,7 +112,17 @@ export function ListaPedidos() {
                   </div>
                 ),
               },
-              { clave: 'servicio_nombre', titulo: 'Servicio' },
+              {
+                clave: 'servicio_nombre',
+                titulo: 'Servicio',
+                // Tipo: compra nueva o renovación (regla 2026-09-25: la renovación extiende la vigencia).
+                render: (f) => (
+                  <span className="flex items-center gap-2">
+                    {f.servicio_nombre}
+                    {f.pedido_origen_id && <Etiqueta color="blue">Renovación</Etiqueta>}
+                  </span>
+                ),
+              },
               { clave: 'precio_pagado', titulo: 'Precio', render: (f) => moneda(f.precio_pagado) },
               {
                 clave: 'estado',

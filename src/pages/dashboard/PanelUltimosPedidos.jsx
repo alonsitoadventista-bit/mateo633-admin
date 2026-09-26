@@ -87,6 +87,7 @@ export function PanelUltimosPedidos({ recargar }) {
                     <span className="flex items-center gap-2 whitespace-nowrap text-texto/90">
                       <IconoServicio nombre={f.servicio_nombre} imagenUrl={f.servicio_imagen_url} />
                       {f.servicio_nombre}
+                      {f.es_renovacion && <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">Renovación</span>}
                     </span>
                   </td>
                   <td className="px-2.5 py-2.5">

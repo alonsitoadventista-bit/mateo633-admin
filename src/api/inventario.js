@@ -33,8 +33,7 @@ export const asignarManual = (pedidoId, inventario_id) =>
   api.put(`/admin/pedidos/${pedidoId}/inventario/asignar`, { inventario_id });
 
 /** PUT /admin/pedidos/:id/inventario/asignar-auto -- asigna el primer perfil disponible (pedido activo sin perfil). */
-export const asignarAutomatico = (pedidoId, { aceptarOtroPerfil = false } = {}) =>
-  api.put(`/admin/pedidos/${pedidoId}/inventario/asignar-auto`, aceptarOtroPerfil ? { aceptar_otro_perfil: true } : undefined);
+export const asignarAutomatico = (pedidoId) => api.put(`/admin/pedidos/${pedidoId}/inventario/asignar-auto`);
 
 /**
  * PUT /admin/pedidos/:id/inventario/entrega-manual -- botón de EMERGENCIA:

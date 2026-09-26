@@ -9,15 +9,16 @@
 
 export const ESTADOS_CLIENTE = ['activo', 'inactivo', 'bloqueado'];
 
-export const ESTADOS_PEDIDO = ['pendiente', 'pagado', 'activo', 'vencido', 'cancelado'];
+export const ESTADOS_PEDIDO = ['pendiente', 'pagado', 'activo', 'vencido', 'cancelado', 'renovado'];
 
 /** Desde qué estado se puede pasar a cuál (gobierna los botones de acción del pedido). */
 export const TRANSICIONES_PEDIDO = {
   pendiente: ['pagado', 'cancelado'],
   pagado: ['activo', 'cancelado'],
-  activo: ['vencido', 'cancelado'],
-  vencido: [],
+  activo: ['vencido', 'cancelado', 'renovado'],
+  vencido: ['renovado'],
   cancelado: [],
+  renovado: [],
 };
 
 export const TIPOS_PAGO = ['total', 'parcial'];
@@ -77,6 +78,8 @@ export const COLOR_ESTADO_PEDIDO = {
   activo: 'green',
   vencido: 'red',
   cancelado: 'gray',
+  // Migración 023: reemplazado por su renovación confirmada (el servicio sigue en la renovación).
+  renovado: 'gray',
 };
 
 /** Clases Tailwind por estado del inventario (Fase 1). */

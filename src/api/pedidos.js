@@ -39,12 +39,26 @@ export const crear = ({ cliente_id, plan_id }) => api.post('/admin/pedidos', { c
 export const marcarPagado = (id, datos) => api.put(`/admin/pedidos/${id}/marcar-pagado`, datos);
 
 /**
- * PUT /admin/pedidos/:id/activar — calcula vencimiento y programa 3 recordatorios.
- * Una renovación que no puede conservar su perfil NO se activa (409), salvo
- * `aceptarOtroPerfil`: decisión explícita del administrador (el cliente cambia de credenciales).
+ * PUT /admin/pedidos/:id/activar — CLIENTE NUEVO: asigna perfil, calcula vencimiento y programa 3 recordatorios.
+ * Una renovación NO se activa aquí: se usa confirmarRenovacion.
  */
-export const activar = (id, { aceptarOtroPerfil = false } = {}) =>
-  api.put(`/admin/pedidos/${id}/activar`, aceptarOtroPerfil ? { aceptar_otro_perfil: true } : undefined);
+export const activar = (id) => api.put(`/admin/pedidos/${id}/activar`);
+
+/**
+ * PUT /admin/pedidos/:id/confirmar-renovacion — body opcional { monto, metodo } (si está pendiente).
+ * Un solo paso: pago + mismo perfil + vigencia extendida. -> { pedido, perfil, conservado, mensaje }
+ * Si el perfil no se puede conservar: 409 con codigo PERFIL_RENOVACION_NO_CONSERVABLE.
+ */
+export const confirmarRenovacion = (id, datos) => api.put(`/admin/pedidos/${id}/confirmar-renovacion`, datos);
+
+/**
+ * PUT /admin/pedidos/:id/modificar-renovacion — body { perfil_id, motivo, monto? }. Solo administrador.
+ * -> { pedido, perfil, cambios, requiere_entrega }
+ */
+export const modificarRenovacion = (id, datos) => api.put(`/admin/pedidos/${id}/modificar-renovacion`, datos);
+
+/** GET /admin/pedidos/:id/mensaje-renovacion — { texto, cliente_whatsapp, credenciales_cambiaron, ... } */
+export const mensajeRenovacion = (id) => api.get(`/admin/pedidos/${id}/mensaje-renovacion`);
 
 /**
  * GET /admin/pedidos/:id/perfil-previsto — solo lectura: qué perfil conservará la renovación al activarse.
